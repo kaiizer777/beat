@@ -1,46 +1,43 @@
 package com.beat.service;
 
 import com.beat.entity.Channel;
+import com.beat.entity.DigestRun;
+import com.beat.entity.DigestRunStatus;
 import com.beat.repository.ChannelRepository;
+import com.beat.repository.DigestRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.stereotype.Service;
-
-import com.beat.entity.DigestRun;
-import com.beat.entity.DigestRunStatus;
-import com.beat.repository.DigestRunRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 
 @Service
 public class DynamicSchedulerService {
 
     private static final Logger log = LoggerFactory.getLogger(DynamicSchedulerService.class);
 
-    private final ThreadPoolTaskScheduler taskScheduler;
     private final ChannelRepository channelRepository;
     private final DigestRunRepository digestRunRepository;
     private final DigestPipelineService digestPipelineService;
 
-    private final Map<Long, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     private final Set<Long> runningChannelIds = ConcurrentHashMap.newKeySet();
 
-    public DynamicSchedulerService(ThreadPoolTaskScheduler taskScheduler,
-                                  ChannelRepository channelRepository,
+    public DynamicSchedulerService(ChannelRepository channelRepository,
                                   DigestRunRepository digestRunRepository,
                                   DigestPipelineService digestPipelineService) {
-        this.taskScheduler = taskScheduler;
         this.channelRepository = channelRepository;
         this.digestRunRepository = digestRunRepository;
         this.digestPipelineService = digestPipelineService;
@@ -48,7 +45,7 @@ public class DynamicSchedulerService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initSchedules() {
-        // A8 fix: recover any PENDING runs left by a crashed/killed JVM
+        // Recover any PENDING runs left by a crashed/killed JVM
         List<DigestRun> stuckRuns = digestRunRepository.findByStatus(DigestRunStatus.PENDING);
         if (!stuckRuns.isEmpty()) {
             log.warn("[STARTUP RECOVERY] Found {} PENDING digest_run(s) from a previous crash. Marking as FAILED.", stuckRuns.size());
@@ -59,50 +56,66 @@ public class DynamicSchedulerService {
                 log.warn("[STARTUP RECOVERY] Marked digest_run #{} (channel_id={}) as FAILED.", stuckRun.getId(), stuckRun.getChannel().getId());
             }
         }
+        log.info("Stateless dynamic scheduler initialized. Pending channels will be polled via GitHub Actions or internal endpoint.");
+    }
 
-        log.info("Initializing dynamic schedules for active channels on application startup...");
+    public List<Long> processDueChannels() {
+        Instant now = Instant.now();
         List<Channel> activeChannels = channelRepository.findByIsActiveTrue();
+        List<Long> triggeredChannelIds = new ArrayList<>();
+
+        log.info("Evaluating {} active channel(s) for due execution at {}...", activeChannels.size(), now);
+
         for (Channel channel : activeChannels) {
-            scheduleChannel(channel);
+            if (isDue(channel, now)) {
+                log.info("Channel ID {} ('{}') is due for execution. Executing pipeline...", channel.getId(), channel.getName());
+                executeChannelPipeline(channel.getId());
+                triggeredChannelIds.add(channel.getId());
+            } else {
+                log.debug("Channel ID {} ('{}') is not due at {}.", channel.getId(), channel.getName(), now);
+            }
         }
-        log.info("Initialized dynamic schedules for {} active channels.", activeChannels.size());
+
+        log.info("Finished processing due channels. Total triggered: {} / evaluated: {}", triggeredChannelIds.size(), activeChannels.size());
+        return triggeredChannelIds;
     }
 
-    public synchronized void scheduleChannel(Channel channel) {
-        if (channel == null || channel.getId() == null) {
-            return;
+    public boolean isDue(Channel channel, Instant now) {
+        if (channel == null || !Boolean.TRUE.equals(channel.getIsActive())) {
+            return false;
+        }
+        if (channel.getCronTime() == null || channel.getTimezone() == null) {
+            return false;
         }
 
-        unscheduleChannel(channel.getId());
-
-        if (!Boolean.TRUE.equals(channel.getIsActive())) {
-            log.info("Channel ID {} ('{}') is inactive. Not scheduling.", channel.getId(), channel.getName());
-            return;
-        }
-
+        ZoneId zoneId;
         try {
-            ChannelDailyTrigger trigger = new ChannelDailyTrigger(channel.getCronTime(), channel.getTimezone());
-            Runnable task = () -> executeChannelPipeline(channel.getId());
-
-            ScheduledFuture<?> future = taskScheduler.schedule(task, trigger);
-            scheduledTasks.put(channel.getId(), future);
-
-            log.info("Successfully scheduled Channel ID: {} ('{}') for daily execution at {} [{}].",
-                    channel.getId(), channel.getName(), channel.getCronTime(), channel.getTimezone());
+            zoneId = ZoneId.of(channel.getTimezone());
         } catch (Exception e) {
-            log.error("Failed to schedule Channel ID {}: {}", channel.getId(), e.getMessage(), e);
+            log.error("Invalid timezone '{}' for Channel ID {}", channel.getTimezone(), channel.getId());
+            return false;
         }
-    }
 
-    public synchronized void unscheduleChannel(Long channelId) {
-        if (channelId == null) {
-            return;
+        ZonedDateTime zdtNow = now.atZone(zoneId);
+        ZonedDateTime todayScheduled = zdtNow.toLocalDate().atTime(channel.getCronTime()).atZone(zoneId);
+
+        Instant mostRecentScheduled;
+        if (todayScheduled.toInstant().isAfter(now)) {
+            mostRecentScheduled = todayScheduled.minusDays(1).toInstant();
+        } else {
+            mostRecentScheduled = todayScheduled.toInstant();
         }
-        ScheduledFuture<?> future = scheduledTasks.remove(channelId);
-        if (future != null) {
-            future.cancel(false);
-            log.info("Unscheduled task for Channel ID: {}.", channelId);
-        }
+
+        Duration timeSinceScheduled = Duration.between(mostRecentScheduled, now);
+
+        // Due if within 10 minutes of the scheduled instance
+        boolean withinWindow = !timeSinceScheduled.isNegative() && timeSinceScheduled.toMinutes() <= 10;
+
+        // Overlap protection: check if channel has already run on or after the scheduled instance
+        Instant lastRunAt = channel.getLastRunAt();
+        boolean alreadyRan = (lastRunAt != null) && !lastRunAt.isBefore(mostRecentScheduled);
+
+        return withinWindow && !alreadyRan;
     }
 
     public void executeChannelPipeline(Long channelId) {
@@ -117,6 +130,9 @@ public class DynamicSchedulerService {
                 log.info("Channel ID {} is deleted or inactive. Skipping execution.", channelId);
                 return;
             }
+
+            channel.setLastRunAt(Instant.now());
+            channelRepository.save(channel);
 
             log.info("Trigger fired for Channel ID: {} ('{}'). Executing digest pipeline.", channel.getId(), channel.getName());
             digestPipelineService.executeDigestPipeline(channel);
@@ -143,8 +159,6 @@ public class DynamicSchedulerService {
         log.info("Triggering manual digest run for Channel ID: {} ('{}')", channel.getId(), channel.getName());
         CompletableFuture.runAsync(() -> executeChannelPipeline(channelId));
 
-        // Wait for the async task to create the PENDING digest_run row in the DB.
-        // Retry up to 5 times with 300ms intervals (1.5s total max wait).
         for (int attempt = 0; attempt < 5; attempt++) {
             try {
                 Thread.sleep(300);

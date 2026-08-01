@@ -46,6 +46,9 @@ public class Channel {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
+    @Column(name = "last_run_at")
+    private Instant lastRunAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -147,6 +150,14 @@ public class Channel {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public Instant getLastRunAt() {
+        return lastRunAt;
+    }
+
+    public void setLastRunAt(Instant lastRunAt) {
+        this.lastRunAt = lastRunAt;
     }
 
     public Instant getCreatedAt() {

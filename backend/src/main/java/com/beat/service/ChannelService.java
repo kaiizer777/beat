@@ -25,16 +25,13 @@ public class ChannelService {
     private final ChannelRepository channelRepository;
     private final DigestRunRepository digestRunRepository;
     private final NewsItemRepository newsItemRepository;
-    private final DynamicSchedulerService dynamicSchedulerService;
 
     public ChannelService(ChannelRepository channelRepository,
                           DigestRunRepository digestRunRepository,
-                          NewsItemRepository newsItemRepository,
-                          DynamicSchedulerService dynamicSchedulerService) {
+                          NewsItemRepository newsItemRepository) {
         this.channelRepository = channelRepository;
         this.digestRunRepository = digestRunRepository;
         this.newsItemRepository = newsItemRepository;
-        this.dynamicSchedulerService = dynamicSchedulerService;
     }
 
     public ChannelResponse createChannel(ChannelRequest request, String userId) {
@@ -51,7 +48,6 @@ public class ChannelService {
         );
 
         Channel saved = channelRepository.save(channel);
-        dynamicSchedulerService.scheduleChannel(saved);
         return toResponse(saved);
     }
 
@@ -94,7 +90,6 @@ public class ChannelService {
         }
 
         Channel updated = channelRepository.save(channel);
-        dynamicSchedulerService.scheduleChannel(updated);
         return toResponse(updated);
     }
 
@@ -113,10 +108,8 @@ public class ChannelService {
         }
         digestRunRepository.deleteAll(runs);
 
-        dynamicSchedulerService.unscheduleChannel(id);
         channelRepository.delete(channel);
     }
-
 
     private ChannelResponse toResponse(Channel channel) {
         Optional<DigestRun> latestRunOpt = digestRunRepository.findTopByChannelIdOrderByRunAtDesc(channel.getId());
@@ -131,4 +124,3 @@ public class ChannelService {
         }
     }
 }
-

@@ -1,3 +1,6 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: beat
@@ -40,3 +43,7 @@ cors:
 
 auth:
   secret: ${AUTH_SECRET}
+
+internal:
+  secret: ${INTERNAL_SECRET:default_internal_secret_key}
+

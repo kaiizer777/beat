@@ -37,7 +37,10 @@ public class DatabaseMigrationInitializer implements CommandLineRunner {
                 log.info("User table check notice during startup: {}", ex.getMessage());
                 jdbcTemplate.update("UPDATE channel SET user_id = 'test_user_id' WHERE user_id IS NULL");
             }
-            log.info("Channel table user_id migration completed successfully.");
+            log.info("Running Phase 14 database schema migration check for channel.last_run_at...");
+            jdbcTemplate.execute("ALTER TABLE channel ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMP WITH TIME ZONE;");
+
+            log.info("Channel table migration completed successfully.");
         } catch (Exception e) {
             log.warn("Migration notice: {}", e.getMessage());
         }
