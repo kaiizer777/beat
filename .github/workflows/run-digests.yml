@@ -1,0 +1,17 @@
+name: Poll Due Channels
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-due-channels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger due channels endpoint
+        run: |
+          curl -X POST https://beat-fuvv.onrender.com/api/internal/run-due-channels \
+            -H "X-Internal-Secret: ${{ secrets.INTERNAL_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
