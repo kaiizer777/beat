@@ -17,10 +17,10 @@ export function AccountModal({ isOpen, onClose }: AccountModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-cyan-950/30 text-slate-100 relative overflow-hidden grid grid-rows-[minmax(0,1fr)_auto] max-h-[85vh]"
+        className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-cyan-950/30 text-slate-100 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6">
           {/* Top Header */}
           <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
             <div className="flex items-center space-x-3">
@@ -79,7 +79,7 @@ export function AccountModal({ isOpen, onClose }: AccountModalProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between p-6 pt-4 border-t border-slate-800 bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-6 border-t border-slate-800 bg-slate-900/50">
           <button
             onClick={() => signOut()}
             className="flex items-center space-x-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
