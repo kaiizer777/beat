@@ -24,7 +24,7 @@ public class TinyFishClient {
     private final ObjectMapper objectMapper;
     private final String apiKey;
 
-    public TinyFishClient(@Value("${TINYFISH_API_KEY:}") String apiKey) {
+    public TinyFishClient(@Value("${tinyfish.api-key:${TINYFISH_API_KEY:}}") String apiKey) {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(10000);
@@ -39,10 +39,11 @@ public class TinyFishClient {
             return List.of();
         }
 
-        String uri = UriComponentsBuilder.fromHttpUrl(SEARCH_API_URL)
+        // Build URI object directly to avoid double-encoding from toUriString()+exchange(String)
+        java.net.URI requestUri = UriComponentsBuilder.fromHttpUrl(SEARCH_API_URL)
                 .queryParam("query", query)
                 .queryParam("domain_type", "news")
-                .toUriString();
+                .build().encode().toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-API-Key", apiKey);
@@ -53,24 +54,44 @@ public class TinyFishClient {
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                log.info("TinyFish Search calling: query='{}' (attempt {})", query, attempt);
-                ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
+                log.info("TinyFish Search calling: query='{}' uri='{}' (attempt {}/{})", query, requestUri, attempt, maxRetries);
+                ResponseEntity<String> response = restTemplate.exchange(requestUri, HttpMethod.GET, entity, String.class);
 
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                    return parseSearchResults(response.getBody());
+                    List<SearchResultItem> results = parseSearchResults(response.getBody());
+                    if (results.isEmpty()) {
+                        log.warn("TinyFish Search returned 0 results for query='{}'. Raw body preview: {}",
+                                query, response.getBody().substring(0, Math.min(200, response.getBody().length())));
+                    }
+                    return results;
+                } else {
+                    log.warn("TinyFish Search non-2xx response: status={} for query='{}'", response.getStatusCode(), query);
                 }
             } catch (HttpClientErrorException.TooManyRequests e) {
-                log.warn("TinyFish Search rate limited (429) on attempt {}. Retrying in {} ms...", attempt, backoffMs);
-                try {
-                    Thread.sleep(backoffMs);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
+                log.warn("TinyFish Search rate limited (429) on attempt {}/{}. Retrying in {} ms...", attempt, maxRetries, backoffMs);
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    backoffMs *= 2;
                 }
-                backoffMs *= 2;
             } catch (Exception e) {
-                log.error("Error executing TinyFish Search for query '{}': {}", query, e.getMessage());
-                break;
+                if (attempt < maxRetries) {
+                    log.warn("TinyFish Search encountered error on attempt {}/{}: {}. Retrying in {} ms...",
+                            attempt, maxRetries, e.getMessage(), backoffMs);
+                    try {
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    backoffMs *= 2;
+                } else {
+                    log.error("Error executing TinyFish Search for query '{}' after {} attempts: {}", query, maxRetries, e.getMessage());
+                }
             }
         }
 

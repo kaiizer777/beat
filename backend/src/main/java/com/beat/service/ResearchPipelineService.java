@@ -77,6 +77,10 @@ public class ResearchPipelineService {
         List<RawArticle> fetchedArticles = new ArrayList<>();
 
         // 4. Fetch full text for candidates using TinyFish Fetch + Jina fallback
+        int tinyFishCount = 0;
+        int jinaCount = 0;
+        int failedCount = 0;
+
         for (int i = 0; i < fetchLimit; i++) {
             RawArticle candidate = deduplicatedCandidates.get(i);
             log.info("Fetching full text ({}/{}): {}", i + 1, fetchLimit, candidate.getUrl());
@@ -86,7 +90,13 @@ public class ResearchPipelineService {
                 candidate.setFullText(fetchResult.getContent());
                 candidate.setFetchSource(fetchResult.getSource());
                 fetchedArticles.add(candidate);
+                if ("tinyfish".equalsIgnoreCase(fetchResult.getSource())) {
+                    tinyFishCount++;
+                } else {
+                    jinaCount++;
+                }
             } else {
+                failedCount++;
                 log.warn("Skipping candidate due to failed full-text extraction: {}", candidate.getUrl());
             }
 
@@ -99,7 +109,8 @@ public class ResearchPipelineService {
             }
         }
 
-        log.info("Successfully fetched full text for {} articles", fetchedArticles.size());
+        log.info("Fetch stage metrics: Total Attempted={}, TinyFish Success={}, Jina Fallback Success={}, Failed={}",
+                fetchLimit, tinyFishCount, jinaCount, failedCount);
 
         // 5. Final deduplication pass to ensure clean output
         List<RawArticle> finalPool = deduplicationService.deduplicate(fetchedArticles);

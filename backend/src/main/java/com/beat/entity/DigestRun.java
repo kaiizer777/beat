@@ -26,6 +26,9 @@ public class DigestRun {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "email_sent", nullable = false)
+    private Boolean emailSent = false;
+
     public DigestRun() {
     }
 
@@ -34,6 +37,7 @@ public class DigestRun {
         this.runAt = runAt;
         this.status = status;
         this.errorMessage = errorMessage;
+        this.emailSent = false;
     }
 
     @PrePersist
@@ -81,5 +85,13 @@ public class DigestRun {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public Boolean getEmailSent() {
+        return emailSent;
+    }
+
+    public void setEmailSent(Boolean emailSent) {
+        this.emailSent = emailSent;
     }
 }

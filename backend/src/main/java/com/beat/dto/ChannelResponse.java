@@ -18,6 +18,8 @@ public class ChannelResponse {
 
     private String timezone;
     private Boolean isActive;
+    private String lastRunStatus;
+    private Instant lastRunAt;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -25,6 +27,10 @@ public class ChannelResponse {
     }
 
     public static ChannelResponse fromEntity(Channel channel) {
+        return fromEntity(channel, null, null);
+    }
+
+    public static ChannelResponse fromEntity(Channel channel, String lastRunStatus, Instant lastRunAt) {
         ChannelResponse resp = new ChannelResponse();
         resp.setId(channel.getId());
         resp.setName(channel.getName());
@@ -33,6 +39,8 @@ public class ChannelResponse {
         resp.setCronTime(channel.getCronTime());
         resp.setTimezone(channel.getTimezone());
         resp.setIsActive(channel.getIsActive());
+        resp.setLastRunStatus(lastRunStatus);
+        resp.setLastRunAt(lastRunAt);
         resp.setCreatedAt(channel.getCreatedAt());
         resp.setUpdatedAt(channel.getUpdatedAt());
         return resp;
@@ -94,6 +102,22 @@ public class ChannelResponse {
         this.isActive = isActive;
     }
 
+    public String getLastRunStatus() {
+        return lastRunStatus;
+    }
+
+    public void setLastRunStatus(String lastRunStatus) {
+        this.lastRunStatus = lastRunStatus;
+    }
+
+    public Instant getLastRunAt() {
+        return lastRunAt;
+    }
+
+    public void setLastRunAt(Instant lastRunAt) {
+        this.lastRunAt = lastRunAt;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -110,3 +134,4 @@ public class ChannelResponse {
         this.updatedAt = updatedAt;
     }
 }
+

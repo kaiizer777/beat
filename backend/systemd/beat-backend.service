@@ -1,0 +1,17 @@
+[Unit]
+Description=Beat News Research Digest Spring Boot Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/beat/backend
+ExecStart=/usr/bin/java -jar /home/ubuntu/beat/backend/target/backend-0.0.1-SNAPSHOT.jar
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/home/ubuntu/beat/backend/.env
+
+[Install]
+WantedBy=multi-user.target

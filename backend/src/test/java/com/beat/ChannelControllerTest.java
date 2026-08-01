@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalTime;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -29,12 +30,21 @@ class ChannelControllerTest {
     private ChannelRepository channelRepository;
 
     @Autowired
+    private com.beat.repository.DigestRunRepository digestRunRepository;
+
+    @Autowired
+    private com.beat.repository.NewsItemRepository newsItemRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
+        newsItemRepository.deleteAll();
+        digestRunRepository.deleteAll();
         channelRepository.deleteAll();
     }
+
 
     @Test
     void testCreateAndGetChannelSuccess() throws Exception {
@@ -50,6 +60,7 @@ class ChannelControllerTest {
         String json = objectMapper.writeValueAsString(request);
 
         mockMvc.perform(post("/api/channels")
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isCreated())
@@ -58,7 +69,8 @@ class ChannelControllerTest {
                 .andExpect(jsonPath("$.articleCount", is(20)))
                 .andExpect(jsonPath("$.timezone", is("Asia/Kolkata")));
 
-        mockMvc.perform(get("/api/channels"))
+        mockMvc.perform(get("/api/channels")
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].name", is("AI/ML")));
@@ -76,6 +88,7 @@ class ChannelControllerTest {
         );
 
         mockMvc.perform(post("/api/channels")
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -94,6 +107,7 @@ class ChannelControllerTest {
         );
 
         mockMvc.perform(post("/api/channels")
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -102,7 +116,7 @@ class ChannelControllerTest {
 
     @Test
     void testUpdateAndDeleteChannel() throws Exception {
-        Channel channel = new Channel("Initial", "Topic", 10, LocalTime.of(9, 0), "UTC", true);
+        Channel channel = new Channel("test_user_id", "Initial", "Topic", 10, LocalTime.of(9, 0), "UTC", true);
         Channel saved = channelRepository.save(channel);
 
         ChannelRequest updateRequest = new ChannelRequest(
@@ -115,6 +129,7 @@ class ChannelControllerTest {
         );
 
         mockMvc.perform(put("/api/channels/" + saved.getId())
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -122,10 +137,13 @@ class ChannelControllerTest {
                 .andExpect(jsonPath("$.timezone", is("America/New_York")))
                 .andExpect(jsonPath("$.isActive", is(false)));
 
-        mockMvc.perform(delete("/api/channels/" + saved.getId()))
+        mockMvc.perform(delete("/api/channels/" + saved.getId())
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id"))))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/channels/" + saved.getId()))
+        mockMvc.perform(get("/api/channels/" + saved.getId())
+                        .with(jwt().jwt(jwt -> jwt.subject("test_user_id"))))
                 .andExpect(status().isNotFound());
     }
 }
+

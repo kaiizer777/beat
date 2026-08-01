@@ -8,6 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
 import java.util.List;
 
 @RestController
@@ -21,32 +24,38 @@ public class ChannelController {
     }
 
     @PostMapping
-    public ResponseEntity<ChannelResponse> createChannel(@Valid @RequestBody ChannelRequest request) {
-        ChannelResponse response = channelService.createChannel(request);
+    public ResponseEntity<ChannelResponse> createChannel(@Valid @RequestBody ChannelRequest request,
+                                                         @AuthenticationPrincipal Jwt jwt) {
+        ChannelResponse response = channelService.createChannel(request, jwt.getSubject());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<ChannelResponse>> getAllChannels() {
-        List<ChannelResponse> response = channelService.getAllChannels();
+    public ResponseEntity<List<ChannelResponse>> getAllChannels(@AuthenticationPrincipal Jwt jwt) {
+        List<ChannelResponse> response = channelService.getAllChannelsForUser(jwt.getSubject());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id) {
-        ChannelResponse response = channelService.getChannelById(id);
+    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id,
+                                                           @AuthenticationPrincipal Jwt jwt) {
+        ChannelResponse response = channelService.getChannelByIdForUser(id, jwt.getSubject());
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ChannelResponse> updateChannel(@PathVariable Long id, @Valid @RequestBody ChannelRequest request) {
-        ChannelResponse response = channelService.updateChannel(id, request);
+    public ResponseEntity<ChannelResponse> updateChannel(@PathVariable Long id,
+                                                         @Valid @RequestBody ChannelRequest request,
+                                                         @AuthenticationPrincipal Jwt jwt) {
+        ChannelResponse response = channelService.updateChannelForUser(id, request, jwt.getSubject());
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteChannel(@PathVariable Long id) {
-        channelService.deleteChannel(id);
+    public ResponseEntity<Void> deleteChannel(@PathVariable Long id,
+                                               @AuthenticationPrincipal Jwt jwt) {
+        channelService.deleteChannelForUser(id, jwt.getSubject());
         return ResponseEntity.noContent().build();
     }
 }
+

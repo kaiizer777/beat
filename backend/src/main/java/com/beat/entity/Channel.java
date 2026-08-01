@@ -42,6 +42,10 @@ public class Channel {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @NotBlank
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -51,7 +55,8 @@ public class Channel {
     public Channel() {
     }
 
-    public Channel(String name, String topicQuery, Integer articleCount, LocalTime cronTime, String timezone, Boolean isActive) {
+    public Channel(String userId, String name, String topicQuery, Integer articleCount, LocalTime cronTime, String timezone, Boolean isActive) {
+        this.userId = userId;
         this.name = name;
         this.topicQuery = topicQuery;
         this.articleCount = articleCount;
@@ -59,6 +64,11 @@ public class Channel {
         this.timezone = timezone;
         this.isActive = isActive != null ? isActive : true;
     }
+
+    public Channel(String name, String topicQuery, Integer articleCount, LocalTime cronTime, String timezone, Boolean isActive) {
+        this("test_user_id", name, topicQuery, articleCount, cronTime, timezone, isActive);
+    }
+
 
     @PrePersist
     protected void onCreate() {
@@ -129,6 +139,14 @@ public class Channel {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public Instant getCreatedAt() {

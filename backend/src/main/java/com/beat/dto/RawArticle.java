@@ -10,6 +10,7 @@ public class RawArticle {
     private String publishedAt;
     private String fullText;
     private String fetchSource; // "tinyfish" or "jina"
+    private String summaryBlurb;
 
     public RawArticle() {
     }
@@ -78,6 +79,14 @@ public class RawArticle {
 
     public void setFetchSource(String fetchSource) {
         this.fetchSource = fetchSource;
+    }
+
+    public String getSummaryBlurb() {
+        return summaryBlurb;
+    }
+
+    public void setSummaryBlurb(String summaryBlurb) {
+        this.summaryBlurb = summaryBlurb;
     }
 
     @Override

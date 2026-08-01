@@ -3,14 +3,19 @@ package com.beat.service;
 import com.beat.dto.ChannelRequest;
 import com.beat.dto.ChannelResponse;
 import com.beat.entity.Channel;
+import com.beat.entity.DigestRun;
 import com.beat.exception.BadRequestException;
+import com.beat.exception.ForbiddenException;
 import com.beat.exception.ResourceNotFoundException;
 import com.beat.repository.ChannelRepository;
+import com.beat.repository.DigestRunRepository;
+import com.beat.repository.NewsItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,15 +23,25 @@ import java.util.stream.Collectors;
 public class ChannelService {
 
     private final ChannelRepository channelRepository;
+    private final DigestRunRepository digestRunRepository;
+    private final NewsItemRepository newsItemRepository;
+    private final DynamicSchedulerService dynamicSchedulerService;
 
-    public ChannelService(ChannelRepository channelRepository) {
+    public ChannelService(ChannelRepository channelRepository,
+                          DigestRunRepository digestRunRepository,
+                          NewsItemRepository newsItemRepository,
+                          DynamicSchedulerService dynamicSchedulerService) {
         this.channelRepository = channelRepository;
+        this.digestRunRepository = digestRunRepository;
+        this.newsItemRepository = newsItemRepository;
+        this.dynamicSchedulerService = dynamicSchedulerService;
     }
 
-    public ChannelResponse createChannel(ChannelRequest request) {
+    public ChannelResponse createChannel(ChannelRequest request, String userId) {
         validateTimezone(request.getTimezone());
 
         Channel channel = new Channel(
+                userId,
                 request.getName(),
                 request.getTopicQuery(),
                 request.getArticleCount(),
@@ -36,26 +51,36 @@ public class ChannelService {
         );
 
         Channel saved = channelRepository.save(channel);
-        return ChannelResponse.fromEntity(saved);
+        dynamicSchedulerService.scheduleChannel(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<ChannelResponse> getAllChannels() {
-        return channelRepository.findAll().stream()
-                .map(ChannelResponse::fromEntity)
+    public List<ChannelResponse> getAllChannelsForUser(String userId) {
+        return channelRepository.findByUserId(userId).stream()
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public ChannelResponse getChannelById(Long id) {
+    public ChannelResponse getChannelByIdForUser(Long id, String userId) {
         Channel channel = channelRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Channel not found with id: " + id));
-        return ChannelResponse.fromEntity(channel);
+
+        if (!channel.getUserId().equals(userId)) {
+            throw new ForbiddenException("Access denied to channel id: " + id);
+        }
+
+        return toResponse(channel);
     }
 
-    public ChannelResponse updateChannel(Long id, ChannelRequest request) {
+    public ChannelResponse updateChannelForUser(Long id, ChannelRequest request, String userId) {
         Channel channel = channelRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Channel not found with id: " + id));
+
+        if (!channel.getUserId().equals(userId)) {
+            throw new ForbiddenException("Access denied to channel id: " + id);
+        }
 
         validateTimezone(request.getTimezone());
 
@@ -69,13 +94,35 @@ public class ChannelService {
         }
 
         Channel updated = channelRepository.save(channel);
-        return ChannelResponse.fromEntity(updated);
+        dynamicSchedulerService.scheduleChannel(updated);
+        return toResponse(updated);
     }
 
-    public void deleteChannel(Long id) {
+    public void deleteChannelForUser(Long id, String userId) {
         Channel channel = channelRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Channel not found with id: " + id));
+
+        if (!channel.getUserId().equals(userId)) {
+            throw new ForbiddenException("Access denied to channel id: " + id);
+        }
+
+        // Cascade-delete: news_items → digest_runs → channel (FK order matters)
+        List<DigestRun> runs = digestRunRepository.findByChannelId(id);
+        for (DigestRun run : runs) {
+            newsItemRepository.deleteByDigestRunId(run.getId());
+        }
+        digestRunRepository.deleteAll(runs);
+
+        dynamicSchedulerService.unscheduleChannel(id);
         channelRepository.delete(channel);
+    }
+
+
+    private ChannelResponse toResponse(Channel channel) {
+        Optional<DigestRun> latestRunOpt = digestRunRepository.findTopByChannelIdOrderByRunAtDesc(channel.getId());
+        String status = latestRunOpt.map(run -> run.getStatus().name()).orElse(null);
+        var runAt = latestRunOpt.map(DigestRun::getRunAt).orElse(null);
+        return ChannelResponse.fromEntity(channel, status, runAt);
     }
 
     private void validateTimezone(String timezone) {
@@ -84,3 +131,4 @@ public class ChannelService {
         }
     }
 }
+
