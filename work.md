@@ -33,9 +33,9 @@
 
 **Goal:** Get empty-but-real Spring Boot backend and Next.js frontend both running locally, Neon DB connected, and Oracle VM provisioned and reachable. Nothing about news/cron logic yet — this phase is pure plumbing.
 
-- [ ] 1.1 Create Neon project, get connection string, confirm you can connect via `psql` or a GUI client. Note the free tier: 0.5GB storage, 100 CU-hrs/month, auto-suspends when idle (cold start ~500ms, this is fine and expected).
-- [ ] 1.2 Scaffold Spring Boot 3.x project (Java 21, Maven or Gradle — pick Maven for simplicity) with starters: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `postgresql` driver, `spring-boot-starter-validation`. Confirm `application.yml` connects to Neon and the app boots with zero entities yet.
-- [ ] 1.3 Scaffold Next.js app (App Router, TypeScript, Tailwind). Confirm `npm run dev` boots a blank homepage.
+- [x] 1.1 Create Neon project, get connection string, confirm you can connect via `psql` or a GUI client. Note the free tier: 0.5GB storage, 100 CU-hrs/month, auto-suspends when idle (cold start ~500ms, this is fine and expected).
+- [x] 1.2 Scaffold Spring Boot 3.x project (Java 21, Maven or Gradle — pick Maven for simplicity) with starters: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `postgresql` driver, `spring-boot-starter-validation`. Confirm `application.yml` connects to Neon and the app boots with zero entities yet.
+- [x] 1.3 Scaffold Next.js app (App Router, TypeScript, Tailwind). Confirm `npm run dev` boots a blank homepage.
 - [ ] 1.4 Provision the Oracle Cloud Always Free VM:
   - Sign up for Oracle Cloud (card required for identity verification only, no charge on Always Free resources).
   - Attempt to create an **Ampere A1 Flex** instance (up to 2 OCPU / 12GB RAM under current Always Free limits as of mid-2026 — this was recently reduced from 4 OCPU/24GB, that's expected and fine).
@@ -44,7 +44,7 @@
   - Open port 8080 (or your chosen port) in both the Oracle Security List/NSG AND the VM's local firewall (`iptables`/`firewalld`) — this trips up almost everyone, both layers must be opened.
 - [ ] 1.5 Deploy the empty Spring Boot skeleton to the VM manually once (build the JAR, `scp` it over, run it with `nohup java -jar app.jar &` or a basic `systemd` service file). Confirm you can hit a health-check endpoint from your own machine's browser using the VM's public IP.
 - [ ] 1.6 Deploy the empty Next.js skeleton to Vercel (connect GitHub repo, default settings). Confirm it's live at a `*.vercel.app` URL.
-- [ ] 1.7 Sign up for and collect API keys for: TinyFish (`agent.tinyfish.ai`), Groq (`console.groq.com`), Resend (`resend.com`). Store all keys as environment variables on the VM (never hardcoded) and in Vercel's environment variable settings for anything the frontend needs directly (should be none in this phase — frontend talks to your backend only, never directly to these third-party APIs).
+- [x] 1.7 Sign up for and collect API keys for: TinyFish (`agent.tinyfish.ai`), Groq (`console.groq.com`), Resend (`resend.com`). Store all keys as environment variables on the VM (never hardcoded) and in Vercel's environment variable settings for anything the frontend needs directly (should be none in this phase — frontend talks to your backend only, never directly to these third-party APIs).
 
 **Checkpoint:** You have a live public backend URL (Oracle VM) returning a 200 on a health endpoint, a live frontend URL (Vercel) showing a blank page, a Neon DB you can connect to, and all three third-party API keys saved as env vars. Nothing talks to each other yet — that's fine, that's Phase 2+.
 
