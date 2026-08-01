@@ -43,10 +43,10 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
       <div className="flex items-center space-x-2">
         <button
           onClick={handleOpenModal}
-          className="flex items-center space-x-2 text-xs bg-slate-900 hover:bg-slate-800 text-slate-200 font-medium px-3 py-1.5 rounded-xl border border-slate-800 hover:border-slate-700 transition"
+          className="flex items-center space-x-2 text-xs bg-slate-800 text-slate-200 font-medium px-3 py-1.5 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
           title="Account Settings"
         >
-          <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px]">
+          <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
             {session.user?.email ? session.user.email.charAt(0).toUpperCase() : 'U'}
           </div>
           <span className="hidden sm:inline max-w-[140px] truncate">{session.user?.email}</span>
@@ -55,7 +55,7 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
 
         <button
           onClick={() => signOut()}
-          className="text-xs bg-slate-900 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 p-2 rounded-xl border border-slate-800 hover:border-rose-500/30 transition"
+          className="text-xs bg-slate-800 text-slate-400 p-2 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
           title="Sign out"
         >
           <LogOut className="h-3.5 w-3.5" />
