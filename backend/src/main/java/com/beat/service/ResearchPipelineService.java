@@ -6,7 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.time.Instant;
 import java.time.Year;
 import java.time.temporal.ChronoUnit;
@@ -34,24 +36,34 @@ public class ResearchPipelineService {
         this.deduplicationService = deduplicationService;
     }
 
-    public List<RawArticle> executeResearch(String topicQuery) {
+    public ResearchResult executeResearch(String topicQuery) {
         if (topicQuery == null || topicQuery.isBlank()) {
             log.warn("Empty topicQuery received for research pipeline");
-            return List.of();
+            return new ResearchResult(List.of(), Map.of("error", "empty topicQuery"));
         }
+
+        // Use LinkedHashMap to preserve insertion order in the final JSON-style log line.
+        Map<String, Object> metrics = new LinkedHashMap<>();
 
         log.info("Starting Phase 3 Research Pipeline for topic: '{}'", topicQuery);
 
         // 1. Generate 3-5 deterministic sub-queries
         List<String> subQueries = generateSubQueries(topicQuery);
         log.info("Generated {} sub-queries: {}", subQueries.size(), subQueries);
+        metrics.put("subQueryCount", subQueries.size());
 
         // 2. Execute TinyFish Search for each sub-query in sequence
         List<RawArticle> rawCandidateList = new ArrayList<>();
+        Map<String, Integer> perSubQueryCounts = new LinkedHashMap<>();
+        int totalSubQueriesWithZero = 0;
         for (String subQuery : subQueries) {
             log.info("Executing Search sub-query: '{}'", subQuery);
             List<TinyFishClient.SearchResultItem> searchItems = tinyFishClient.searchNews(subQuery);
             log.info("Sub-query '{}' returned {} items", subQuery, searchItems.size());
+            perSubQueryCounts.put(subQuery, searchItems.size());
+            if (searchItems.isEmpty()) {
+                totalSubQueriesWithZero++;
+            }
 
             for (TinyFishClient.SearchResultItem item : searchItems) {
                 RawArticle rawArticle = new RawArticle(
@@ -76,10 +88,25 @@ public class ResearchPipelineService {
         }
 
         log.info("Total raw candidates collected across sub-queries: {}", rawCandidateList.size());
+        metrics.put("rawCandidatesTotal", rawCandidateList.size());
+        metrics.put("perSubQueryCounts", perSubQueryCounts);
+        metrics.put("subQueriesWithZeroResults", totalSubQueriesWithZero);
 
         // Phase 2: Freshness Filter
         Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
         int initialSize = rawCandidateList.size();
+
+        int droppedNullOrUnparseable = 0;
+        int droppedStale = 0;
+        for (RawArticle a : rawCandidateList) {
+            Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+            if (pub == null) {
+                droppedNullOrUnparseable++;
+            } else if (!pub.isAfter(cutoff)) {
+                droppedStale++;
+            }
+        }
+
         rawCandidateList = rawCandidateList.stream()
                 .filter(a -> {
                     Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
@@ -87,7 +114,12 @@ public class ResearchPipelineService {
                 })
                 .collect(Collectors.toList());
         int dropped = initialSize - rawCandidateList.size();
-        log.debug("Freshness filter dropped {} stale articles", dropped);
+        log.info("Freshness filter: kept {} / dropped {} (nullOrUnparseable={}, stale={})",
+                rawCandidateList.size(), dropped, droppedNullOrUnparseable, droppedStale);
+        metrics.put("freshnessKept", rawCandidateList.size());
+        metrics.put("freshnessDroppedTotal", dropped);
+        metrics.put("freshnessDroppedNullOrUnparseable", droppedNullOrUnparseable);
+        metrics.put("freshnessDroppedStale", droppedStale);
 
         // Phase 3: Pre-Deduplication Sort by Date (newest first)
         rawCandidateList.sort(Comparator.comparing(
@@ -96,8 +128,12 @@ public class ResearchPipelineService {
         ));
 
         // 3. Early deduplication pass on raw candidates before fetching full text
+        int preDedupSize = rawCandidateList.size();
         List<RawArticle> deduplicatedCandidates = deduplicationService.deduplicate(rawCandidateList);
-        log.info("Candidate pool size after initial deduplication: {}", deduplicatedCandidates.size());
+        log.info("Candidate pool size after initial deduplication: {} (dropped {})",
+                deduplicatedCandidates.size(), preDedupSize - deduplicatedCandidates.size());
+        metrics.put("afterPreFetchDedup", deduplicatedCandidates.size());
+        metrics.put("preFetchDedupDropped", preDedupSize - deduplicatedCandidates.size());
 
         // Limit maximum candidate fetches per run to prevent excessive overhead.
         // Raised to 50 so digest runs with targetCount up to 15 have headroom after
@@ -140,12 +176,21 @@ public class ResearchPipelineService {
 
         log.info("Fetch stage metrics: Total Attempted={}, TinyFish Success={}, Jina Fallback Success={}, Failed={}",
                 fetchLimit, tinyFishCount, jinaCount, failedCount);
+        metrics.put("fetchAttempted", fetchLimit);
+        metrics.put("fetchSucceededTotal", tinyFishCount + jinaCount);
+        metrics.put("fetchTinyfishSuccess", tinyFishCount);
+        metrics.put("fetchJinaSuccess", jinaCount);
+        metrics.put("fetchFailed", failedCount);
 
         // 5. Final deduplication pass to ensure clean output
+        int beforeFinalDedup = fetchedArticles.size();
         List<RawArticle> finalPool = deduplicationService.deduplicate(fetchedArticles);
-        log.info("Phase 3 Research Pipeline completed. Final pool size: {} articles for topic '{}'", finalPool.size(), topicQuery);
+        log.info("Phase 3 Research Pipeline completed. Final pool size: {} articles (final dedup dropped {}) for topic '{}'",
+                finalPool.size(), beforeFinalDedup - finalPool.size(), topicQuery);
+        metrics.put("finalPoolSize", finalPool.size());
+        metrics.put("finalDedupDropped", beforeFinalDedup - finalPool.size());
 
-        return finalPool;
+        return new ResearchResult(finalPool, metrics);
     }
 
     private List<String> generateSubQueries(String topic) {

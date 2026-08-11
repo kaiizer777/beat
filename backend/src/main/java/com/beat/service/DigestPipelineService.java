@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,13 +62,17 @@ public class DigestPipelineService {
         try {
             // 1. Fetch candidate pool via Phase 3 Research Pipeline
             log.info("[DIGEST_RUN #{}] STAGE 1: Starting Research Pipeline (TinyFish Search & Fetch)...", runId);
-            List<RawArticle> candidateArticles = researchPipelineService.executeResearch(channel.getTopicQuery());
+            ResearchResult researchResult = researchPipelineService.executeResearch(channel.getTopicQuery());
+            List<RawArticle> candidateArticles = researchResult.getArticles();
+            Map<String, Object> researchMetrics = researchResult.getMetrics();
             log.info("[DIGEST_RUN #{}] STAGE 1 COMPLETED: Research returned {} candidate articles with full text for channel '{}'",
                     runId, candidateArticles.size(), channel.getName());
 
             if (candidateArticles.isEmpty()) {
                 log.warn("[DIGEST_RUN #{}] STAGE 1 WARNING: No articles were found/fetched for channel '{}'. Marking run as completed with 0 items.",
                         runId, channel.getName());
+                log.info("[DIGEST_RUN #{}] PIPELINE_METRICS targetCount={} research={} clusterRank=NA synthesize=NA factCheck=NA persisted=0",
+                        runId, channel.getArticleCount() != null ? channel.getArticleCount() : 10, researchMetrics);
                 digestRun.setStatus(DigestRunStatus.SUCCESS);
                 digestRun.setEmailSent(false);
                 digestRun = digestRunRepository.save(digestRun);
@@ -86,31 +92,44 @@ public class DigestPipelineService {
             // targetCount already computed above for the candidate-pool warning
             log.info("[DIGEST_RUN #{}] STAGE 2: Starting Groq Call 1 (Cluster & Rank) - candidates: {}, targetCount: {}",
                     runId, candidateArticles.size(), targetCount);
+            int rankInput = candidateArticles.size();
             List<RawArticle> rankedArticles = llmDigestService.clusterAndRank(candidateArticles, channel.getTopicQuery(), targetCount, currentInstant);
-            log.info("[DIGEST_RUN #{}] STAGE 2 COMPLETED: Ranked candidate pool trimmed to top {} articles", runId, rankedArticles.size());
+            int rankOutput = rankedArticles.size();
+            log.info("[DIGEST_RUN #{}] STAGE 2 COMPLETED: Ranked candidate pool trimmed to top {} articles (input={} output={})",
+                    runId, rankedArticles.size(), rankInput, rankOutput);
 
             // 3. Groq Call 2: Synthesize 'why it matters' blurbs
             log.info("[DIGEST_RUN #{}] STAGE 3: Starting Groq Call 2 (Synthesize Blurbs) for {} articles...", runId, rankedArticles.size());
+            int synthesizeInput = rankedArticles.size();
             llmDigestService.synthesizeBlurbs(rankedArticles, channel.getTopicQuery(), currentInstant);
-            log.info("[DIGEST_RUN #{}] STAGE 3 COMPLETED: Blurbs synthesized for {} articles", runId, rankedArticles.size());
+            int synthesizeWithBlurb = (int) rankedArticles.stream()
+                    .filter(a -> a.getSummaryBlurb() != null && !a.getSummaryBlurb().isBlank())
+                    .count();
+            log.info("[DIGEST_RUN #{}] STAGE 3 COMPLETED: Blurbs synthesized for {}/{} articles",
+                    runId, synthesizeWithBlurb, synthesizeInput);
 
             // 3.5 Phase 5: Fact-Checking / Verification Stage
             log.info("[DIGEST_RUN #{}] STAGE 3.5: Starting Fact-Checking for {} articles...", runId, rankedArticles.size());
             List<RawArticle> verifiedArticles = new ArrayList<>();
             int originalCount = rankedArticles.size();
+            Map<String, Integer> rejectionReasonCounts = new LinkedHashMap<>();
             for (RawArticle article : rankedArticles) {
                 LlmDigestService.VerificationResult verifyResult = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
                 if (verifyResult.isAccepted()) {
                     article.setSummaryBlurb(verifyResult.getRefinedBlurb());
                     verifiedArticles.add(article);
                 } else {
+                    String reason = verifyResult.getRejectionReason() != null ? verifyResult.getRejectionReason() : "unspecified";
                     log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'. Reason: {}",
-                            runId, article.getTitle(), verifyResult.getRejectionReason());
+                            runId, article.getTitle(), reason);
+                    rejectionReasonCounts.merge(reason, 1, Integer::sum);
                 }
             }
 
             int rejectedCount = originalCount - verifiedArticles.size();
-            log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected)", runId, verifiedArticles.size(), originalCount, rejectedCount);
+            int acceptedCount = verifiedArticles.size();
+            log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected) rejectionReasons={}",
+                    runId, acceptedCount, originalCount, rejectedCount, rejectionReasonCounts);
 
             // Workflow.md Phase 5 step 5: "error budget" — if >50% of articles are
             // rejected, log an ERROR and surface it in digest_run.error_message. This
@@ -142,6 +161,35 @@ public class DigestPipelineService {
 
             newsItemRepository.saveAll(newsItems);
             log.info("[DIGEST_RUN #{}] STAGE 4 COMPLETED: {} NewsItem entities saved", runId, newsItems.size());
+
+            // Single end-of-pipeline metrics block — easiest place to compare
+            // funnel widths at each stage. Format mirrors a JSON-ish key=value list.
+            Map<String, Object> clusterRankMetrics = new LinkedHashMap<>();
+            clusterRankMetrics.put("input", rankInput);
+            clusterRankMetrics.put("output", rankOutput);
+            clusterRankMetrics.put("dropped", rankInput - rankOutput);
+            clusterRankMetrics.put("skippedBecauseBypass", rankInput <= targetCount);
+
+            Map<String, Object> synthesizeMetrics = new LinkedHashMap<>();
+            synthesizeMetrics.put("input", synthesizeInput);
+            synthesizeMetrics.put("withBlurb", synthesizeWithBlurb);
+            synthesizeMetrics.put("withoutBlurb", synthesizeInput - synthesizeWithBlurb);
+
+            Map<String, Object> factCheckMetrics = new LinkedHashMap<>();
+            factCheckMetrics.put("input", originalCount);
+            factCheckMetrics.put("accepted", acceptedCount);
+            factCheckMetrics.put("rejected", rejectedCount);
+            factCheckMetrics.put("rejectionReasons", rejectionReasonCounts);
+
+            Map<String, Object> allMetrics = new LinkedHashMap<>();
+            allMetrics.put("targetCount", targetCount);
+            allMetrics.put("research", researchMetrics);
+            allMetrics.put("clusterRank", clusterRankMetrics);
+            allMetrics.put("synthesize", synthesizeMetrics);
+            allMetrics.put("factCheck", factCheckMetrics);
+            allMetrics.put("persisted", newsItems.size());
+
+            log.info("[DIGEST_RUN #{}] PIPELINE_METRICS {}", runId, allMetrics);
 
             // 5. Phase 6: Email Delivery
             log.info("[DIGEST_RUN #{}] STAGE 5: Triggering Email Delivery via Resend...", runId);

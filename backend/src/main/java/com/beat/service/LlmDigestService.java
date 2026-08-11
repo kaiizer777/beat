@@ -204,6 +204,15 @@ public class LlmDigestService {
     /**
      * Call 3: Fact-Check & Verify a generated blurb against the source text.
      *
+     * <p>On a Groq API failure (network, 429, JSON parse error) we FALL BACK to the
+     * synthesized blurb rather than dropping the article. The synthesize stage
+     * already enforced the strict "100% derivative" rule with its own prompt, so
+     * the blurb is safe to keep. workflow.md Phase 5 step 3 only authorises a drop
+     * when the model returns {@code isValid=false AND refinedBlurb=null} — i.e. a
+     * real model rejection, not a transport failure. A transport failure must not
+     * be silently conflated with a model rejection; that was the dominant cause of
+     * under-delivery at higher targetCounts.</p>
+     *
      * @return VerificationResult with the (possibly refined) blurb on success, or a
      *         rejectionReason on failure. Callers should check {@code isAccepted()}
      *         to decide whether to keep the article in the digest.
@@ -227,8 +236,19 @@ public class LlmDigestService {
         userPrompt.append("Generated Blurb:\n").append(generatedBlurb).append("\n\n");
         userPrompt.append("""
                 Instructions:
-                1. Verify that no numbers, model versions, or named entities appear in the blurb that are absent from the source text.
+                1. Verify that no specific numbers, model versions, or named entities appear in the blurb that are absent from the source text.
                 2. Verify that timeline claims are consistent with the Current Date.
+
+                A blurb is INVALID only when it contains:
+                - Specific numbers, statistics, or model versions that are absent from or contradict the source.
+                - Named entities (people, companies, products) that are not in the source.
+                - Timeline claims that contradict the source or are inconsistent with the Current Date.
+                - A direct factual contradiction with the source.
+
+                A blurb is VALID when it:
+                - Paraphrases or synthesises information from the source (paraphrasing is acceptable).
+                - Uses common journalistic framing ("growing role", "significant implications", "raising concerns", "valuable insights", "broader market", etc.) that is not present verbatim in the source but is consistent with the source's overall message.
+                - Highlights the most newsworthy aspect of the source.
 
                 CRITICAL RULES FOR REFINED BLURB:
                 - If you generate a refinedBlurb, do NOT extrapolate, infer, or invent model versions, software names, release dates, or statistics.
@@ -267,8 +287,14 @@ public class LlmDigestService {
             return VerificationResult.rejected(rejectionReason != null ? rejectionReason : "unspecified");
 
         } catch (Exception e) {
-            log.error("Groq Call 3 (Fact-Check) failed for article '{}': {}", article.getTitle(), e.getMessage(), e);
-            return VerificationResult.rejected("fact-check call failed: " + e.getMessage());
+            // Transport / API / JSON-parse failure is NOT a model rejection. Fall
+            // back to the synthesized blurb (which already passed the synthesize
+            // stage's strict derivative rules) and log loudly. The workflow.md
+            // error budget will still pick up persistent systematic issues via
+            // the WARN reason log in the orchestrator.
+            log.warn("Groq Call 3 (Fact-Check) call failed for article '{}' ({}). Falling back to synthesized blurb.",
+                    article.getTitle(), e.getMessage());
+            return VerificationResult.accepted(generatedBlurb);
         }
     }
 

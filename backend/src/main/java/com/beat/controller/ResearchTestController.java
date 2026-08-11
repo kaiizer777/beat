@@ -45,7 +45,7 @@ public class ResearchTestController {
         log.info("--- MANUAL TEST HARNESS TRIGGERED FOR TOPIC: '{}' ---", topic);
 
         long startTime = System.currentTimeMillis();
-        List<RawArticle> articles = researchPipelineService.executeResearch(topic);
+        List<RawArticle> articles = researchPipelineService.executeResearch(topic).getArticles();
         long duration = System.currentTimeMillis() - startTime;
 
         List<Map<String, Object>> articleSummaries = articles.stream().map(a -> {

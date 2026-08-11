@@ -66,7 +66,7 @@ public class ResearchPipelineServiceTest {
         when(fetchClient.fetchContent(anyString())).thenReturn(fetchResult);
 
         // Execute
-        List<RawArticle> finalPool = researchPipelineService.executeResearch("test");
+        List<RawArticle> finalPool = researchPipelineService.executeResearch("test").getArticles();
 
         // Verify
         // Stale item (200 hours old) should be filtered out.
