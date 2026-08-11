@@ -127,7 +127,7 @@
 
 ## Phase 7 — Integration Smoke Test & Cleanup
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Confirm the full pipeline works end-to-end with all phases active before merging.
 

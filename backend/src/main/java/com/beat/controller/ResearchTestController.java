@@ -111,6 +111,7 @@ public class ResearchTestController {
         channel.setCronTime(LocalTime.of(8, 0));
         channel.setTimezone("Asia/Kolkata");
         channel.setIsActive(true);
+        channel.setUserId("test-user");
         channel = channelRepository.save(channel);
 
         long startTime = System.currentTimeMillis();
