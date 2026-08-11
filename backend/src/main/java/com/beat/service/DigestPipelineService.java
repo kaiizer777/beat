@@ -13,13 +13,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class DigestPipelineService {
 
     private static final Logger log = LoggerFactory.getLogger(DigestPipelineService.class);
+
+    @Value("${digest.freshness.max-age-hours:168}")
+    private int maxAgeHours;
 
     private final ResearchPipelineService researchPipelineService;
     private final LlmDigestService llmDigestService;
@@ -61,6 +67,17 @@ public class DigestPipelineService {
             List<RawArticle> candidateArticles = researchPipelineService.executeResearch(channel.getTopicQuery());
             log.info("[DIGEST_RUN #{}] STAGE 1 COMPLETED: Research returned {} candidate articles with full text for channel '{}'",
                     runId, candidateArticles.size(), channel.getName());
+
+            Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
+            int initialSize = candidateArticles.size();
+            candidateArticles = candidateArticles.stream()
+                    .filter(a -> {
+                        Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+                        return pub != null && pub.isAfter(cutoff);
+                    })
+                    .collect(Collectors.toList());
+            int dropped = initialSize - candidateArticles.size();
+            log.debug("[DIGEST_RUN #{}] STAGE 1.1: Freshness filter dropped {} stale articles", runId, dropped);
 
             if (candidateArticles.isEmpty()) {
                 log.warn("[DIGEST_RUN #{}] STAGE 1 WARNING: No articles were found/fetched for channel '{}'. Marking run as completed with 0 items.",

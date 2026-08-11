@@ -47,3 +47,6 @@ auth:
 internal:
   secret: ${INTERNAL_SECRET:default_internal_secret_key}
 
+digest:
+  freshness:
+    max-age-hours: 168

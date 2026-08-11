@@ -24,7 +24,7 @@
 
 ## Phase 2 — Freshness Filter in `DigestPipelineService`
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Discard stale articles before they reach the LLM, keeping the context window clean and temporally relevant.
 
