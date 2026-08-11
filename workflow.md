@@ -46,7 +46,7 @@
 
 ## Phase 3 — Pre-Deduplication Sort by Date
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: When deduplication collapses near-duplicate stories into one, ensure the **newest** version of the story survives.
 

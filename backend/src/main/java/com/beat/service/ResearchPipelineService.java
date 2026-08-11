@@ -7,11 +7,19 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class ResearchPipelineService {
 
     private static final Logger log = LoggerFactory.getLogger(ResearchPipelineService.class);
+
+    @Value("${digest.freshness.max-age-hours:168}")
+    private int maxAgeHours;
 
     private final TinyFishClient tinyFishClient;
     private final TinyFishFetchClient fetchClient;
@@ -67,6 +75,24 @@ public class ResearchPipelineService {
         }
 
         log.info("Total raw candidates collected across sub-queries: {}", rawCandidateList.size());
+
+        // Phase 2: Freshness Filter
+        Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
+        int initialSize = rawCandidateList.size();
+        rawCandidateList = rawCandidateList.stream()
+                .filter(a -> {
+                    Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+                    return pub != null && pub.isAfter(cutoff);
+                })
+                .collect(Collectors.toList());
+        int dropped = initialSize - rawCandidateList.size();
+        log.debug("Freshness filter dropped {} stale articles", dropped);
+
+        // Phase 3: Pre-Deduplication Sort by Date (newest first)
+        rawCandidateList.sort(Comparator.comparing(
+                (RawArticle a) -> com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt()),
+                Comparator.nullsLast(Comparator.reverseOrder())
+        ));
 
         // 3. Early deduplication pass on raw candidates before fetching full text
         List<RawArticle> deduplicatedCandidates = deduplicationService.deduplicate(rawCandidateList);
