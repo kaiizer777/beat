@@ -54,6 +54,13 @@ public class LlmDigestService {
             userPrompt.append("    Snippet: ").append(article.getSnippet() != null ? article.getSnippet() : "").append("\n\n");
         }
 
+        StringBuilder exampleIndices = new StringBuilder("[");
+        for (int i = 0; i < targetCount; i++) {
+            exampleIndices.append(i);
+            if (i < targetCount - 1) exampleIndices.append(", ");
+        }
+        exampleIndices.append("]");
+
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
         String systemPrompt = """
                 Current Date: {currentDate}. Evaluate all claims of recency (e.g., "new", "just announced", "latest") strictly relative to this date.
@@ -63,10 +70,12 @@ public class LlmDigestService {
                 3. You MUST select EXACTLY {targetCount} articles (unless there are fewer valid candidates available).
                 4. Respond ONLY with a valid JSON object matching this schema:
                 {
-                  "rankedIndices": [index1, index2, index3, ...]
+                  "rankedIndices": {exampleIndices}
                 }
                 Do not include markdown preamble, formatting fences, or any other text outside the JSON object.
-                """.replace("{currentDate}", currentDate).replace("{targetCount}", String.valueOf(targetCount));
+                """.replace("{currentDate}", currentDate)
+                   .replace("{targetCount}", String.valueOf(targetCount))
+                   .replace("{exampleIndices}", exampleIndices.toString());
 
         try {
             String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
@@ -135,6 +144,14 @@ public class LlmDigestService {
             userPrompt.append("Content: ").append(text != null ? text : "").append("\n\n");
         }
 
+        StringBuilder exampleBlurbs = new StringBuilder("[\n");
+        for (int i = 0; i < rankedArticles.size(); i++) {
+            exampleBlurbs.append("    \"2-3 sentence blurb for Article [").append(i).append("]\"");
+            if (i < rankedArticles.size() - 1) exampleBlurbs.append(",");
+            exampleBlurbs.append("\n");
+        }
+        exampleBlurbs.append("  ]");
+
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
         String systemPrompt = """
                 Current Date: {currentDate}. Evaluate all claims of recency (e.g., "new", "just announced", "latest") strictly relative to this date.
@@ -150,12 +167,10 @@ public class LlmDigestService {
                 - Do not invent claims, outside knowledge, or speculation.
                 - Respond ONLY with a valid JSON object matching this schema:
                 {
-                  "blurbs": [
-                    "2-3 sentence blurb for Article 0...",
-                    "2-3 sentence blurb for Article 1..."
-                  ]
+                  "blurbs": {exampleBlurbs}
                 }
-                """.replace("{currentDate}", currentDate);
+                """.replace("{currentDate}", currentDate)
+                   .replace("{exampleBlurbs}", exampleBlurbs.toString());
 
         try {
             String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
