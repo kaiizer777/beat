@@ -75,6 +75,17 @@ public class DynamicSchedulerService {
                 log.debug("Channel ID {} ('{}') is not due at {}.", channel.getId(), channel.getName(), now);
             }
         }
+        Instant cutoff = now.minus(Duration.ofMinutes(15));
+        List<DigestRun> stuckRuns = digestRunRepository.findByStatus(DigestRunStatus.PENDING);
+        for (DigestRun stuckRun : stuckRuns) {
+            if (stuckRun.getRunAt().isBefore(cutoff)) {
+                log.warn("[CRON RECOVERY] Found stuck PENDING run #{} older than 15m. Marking as FAILED.", stuckRun.getId());
+                stuckRun.setStatus(DigestRunStatus.FAILED);
+                stuckRun.setErrorMessage("Run timed out or was interrupted (recovered by cron).");
+                digestRunRepository.save(stuckRun);
+                runningChannelIds.remove(stuckRun.getChannel().getId());
+            }
+        }
 
         log.info("Finished processing due channels. Total triggered: {} / evaluated: {}", triggeredChannelIds.size(), activeChannels.size());
         return triggeredChannelIds;
@@ -108,14 +119,14 @@ public class DynamicSchedulerService {
 
         Duration timeSinceScheduled = Duration.between(mostRecentScheduled, now);
 
-        // Due if within 10 minutes of the scheduled instance
-        boolean withinWindow = !timeSinceScheduled.isNegative() && timeSinceScheduled.toMinutes() <= 10;
+        // Due if the scheduled instance is in the past and we haven't run it yet
+        boolean isPastScheduled = !timeSinceScheduled.isNegative();
 
         // Overlap protection: check if channel has already run on or after the scheduled instance
         Instant lastRunAt = channel.getLastRunAt();
         boolean alreadyRan = (lastRunAt != null) && !lastRunAt.isBefore(mostRecentScheduled);
 
-        return withinWindow && !alreadyRan;
+        return isPastScheduled && !alreadyRan;
     }
 
     public void executeChannelPipeline(Long channelId) {
