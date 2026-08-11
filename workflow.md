@@ -66,7 +66,7 @@
 
 ## Phase 4 — Temporal Anchoring in LLM Prompts (`LlmDigestService`)
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Ground every LLM call in the current date so the model cannot confuse "new in May" with "new today".
 

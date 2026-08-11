@@ -49,7 +49,8 @@ public class DigestPipelineService {
         }
 
         long startTime = System.currentTimeMillis();
-        DigestRun digestRun = new DigestRun(channel, Instant.now(), DigestRunStatus.PENDING, null);
+        Instant currentInstant = Instant.now();
+        DigestRun digestRun = new DigestRun(channel, currentInstant, DigestRunStatus.PENDING, null);
         digestRun = digestRunRepository.save(digestRun);
         Long runId = digestRun.getId();
 
@@ -76,12 +77,12 @@ public class DigestPipelineService {
             int targetCount = channel.getArticleCount() != null ? channel.getArticleCount() : 10;
             log.info("[DIGEST_RUN #{}] STAGE 2: Starting Groq Call 1 (Cluster & Rank) - candidates: {}, targetCount: {}",
                     runId, candidateArticles.size(), targetCount);
-            List<RawArticle> rankedArticles = llmDigestService.clusterAndRank(candidateArticles, channel.getTopicQuery(), targetCount);
+            List<RawArticle> rankedArticles = llmDigestService.clusterAndRank(candidateArticles, channel.getTopicQuery(), targetCount, currentInstant);
             log.info("[DIGEST_RUN #{}] STAGE 2 COMPLETED: Ranked candidate pool trimmed to top {} articles", runId, rankedArticles.size());
 
             // 3. Groq Call 2: Synthesize 'why it matters' blurbs
             log.info("[DIGEST_RUN #{}] STAGE 3: Starting Groq Call 2 (Synthesize Blurbs) for {} articles...", runId, rankedArticles.size());
-            llmDigestService.synthesizeBlurbs(rankedArticles, channel.getTopicQuery());
+            llmDigestService.synthesizeBlurbs(rankedArticles, channel.getTopicQuery(), currentInstant);
             log.info("[DIGEST_RUN #{}] STAGE 3 COMPLETED: Blurbs synthesized for {} articles", runId, rankedArticles.size());
 
             // 4. Persist NewsItem entities for each ranked story
