@@ -6,7 +6,7 @@
 
 ## Phase 1 — Robust Date Parsing in `RawArticle`
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Ensure `publishedAt` is always reliably resolved to a `java.time.Instant`, including for relative-date strings like "3 hours ago".
 

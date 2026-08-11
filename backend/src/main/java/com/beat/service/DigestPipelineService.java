@@ -95,7 +95,7 @@ public class DigestPipelineService {
                 item.setSourceName(article.getPublisher());
                 item.setSummaryBlurb(article.getSummaryBlurb());
                 item.setRankPosition(i + 1);
-                item.setPublishedAt(parseInstantOrNull(article.getPublishedAt()));
+                item.setPublishedAt(com.beat.util.DateParserUtils.parseInstantOrNull(article.getPublishedAt()));
                 newsItems.add(item);
             }
 
@@ -133,17 +133,6 @@ public class DigestPipelineService {
             digestRun.setErrorMessage(e.getMessage());
             digestRun = digestRunRepository.save(digestRun);
             return digestRun;
-        }
-    }
-
-    private Instant parseInstantOrNull(String rawDate) {
-        if (rawDate == null || rawDate.isBlank()) {
-            return null;
-        }
-        try {
-            return Instant.parse(rawDate);
-        } catch (Exception e) {
-            return null;
         }
     }
 }
