@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.Instant;
+import java.time.Year;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -148,10 +149,17 @@ public class ResearchPipelineService {
     private List<String> generateSubQueries(String topic) {
         String trimmed = topic.trim();
         List<String> queries = new ArrayList<>();
+        // Keep the base topic unchanged so search engines can apply their own relevance ranking.
         queries.add(trimmed);
-        queries.add(trimmed + " latest news");
-        queries.add(trimmed + " this week");
-        queries.add(trimmed + " analysis");
+        // Broaden with a generic "news" qualifier instead of strict temporal strings.
+        // Strict qualifiers like " this week" / " latest news" cause the search API to
+        // return 0 results; the temporal filter is already enforced downstream by the
+        // Java Freshness Filter (digest.freshness.max-age-hours).
+        queries.add(trimmed + " news");
+        // Anchor one query to the current year so we still bias toward recent content
+        // without forcing a strict temporal phrase that breaks the search backend.
+        String currentYear = String.valueOf(Year.now().getValue());
+        queries.add(trimmed + " " + currentYear);
         return queries;
     }
 }

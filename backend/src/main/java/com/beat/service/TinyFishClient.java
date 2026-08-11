@@ -40,9 +40,15 @@ public class TinyFishClient {
         }
 
         // Build URI object directly to avoid double-encoding from toUriString()+exchange(String)
+        // Request a larger pool of results per sub-query so freshness filter + dedup have headroom
+        // to reach the downstream targetCount (default 10). TinyFish's pagination/limit parameter
+        // is "max_results"; fall back-friendly values like "limit"/"num" can be added if needed.
         java.net.URI requestUri = UriComponentsBuilder.fromHttpUrl(SEARCH_API_URL)
                 .queryParam("query", query)
                 .queryParam("domain_type", "news")
+                .queryParam("max_results", "20")
+                .queryParam("limit", "20")
+                .queryParam("num", "20")
                 .build().encode().toUri();
 
         HttpHeaders headers = new HttpHeaders();

@@ -74,8 +74,17 @@ public class DigestPipelineService {
                 return digestRun;
             }
 
-            // 2. Groq Call 1: Cluster & Rank articles
+            // Surface upstream starvation: if the raw candidate pool is smaller than the
+            // requested target, the LLM cluster/rank step will be bypassed or thinned,
+            // so flag it loudly for diagnostics.
             int targetCount = channel.getArticleCount() != null ? channel.getArticleCount() : 10;
+            if (candidateArticles.size() < targetCount) {
+                log.warn("[DIGEST_RUN #{}] Candidate pool size ({}) is smaller than targetCount ({}). Upstream research did not yield enough results.",
+                        runId, candidateArticles.size(), targetCount);
+            }
+
+            // 2. Groq Call 1: Cluster & Rank articles
+            // targetCount already computed above for the candidate-pool warning
             log.info("[DIGEST_RUN #{}] STAGE 2: Starting Groq Call 1 (Cluster & Rank) - candidates: {}, targetCount: {}",
                     runId, candidateArticles.size(), targetCount);
             List<RawArticle> rankedArticles = llmDigestService.clusterAndRank(candidateArticles, channel.getTopicQuery(), targetCount, currentInstant);
