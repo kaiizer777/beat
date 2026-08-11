@@ -60,19 +60,29 @@ public class DigestPipelineService {
                 runId, channel.getId(), channel.getName(), channel.getTopicQuery());
 
         try {
+            // Channel-aware freshness window: channel.freshnessWindowDays (default 7) → hours.
+            // Falls back to 168h (7d) if a misconfigured channel has the field null.
+            int freshnessWindowDays = channel.getFreshnessWindowDays() != null
+                    ? channel.getFreshnessWindowDays() : 7;
+            int maxAgeHours = freshnessWindowDays * 24;
+            // Target count must be resolved before the research call: the broader-search
+            // fallback in executeResearch uses it to decide whether to trigger.
+            int targetCount = channel.getArticleCount() != null ? channel.getArticleCount() : 10;
+
             // 1. Fetch candidate pool via Phase 3 Research Pipeline
             log.info("[DIGEST_RUN #{}] STAGE 1: Starting Research Pipeline (TinyFish Search & Fetch)...", runId);
-            ResearchResult researchResult = researchPipelineService.executeResearch(channel.getTopicQuery());
+            ResearchResult researchResult = researchPipelineService.executeResearch(
+                    channel.getTopicQuery(), maxAgeHours, targetCount);
             List<RawArticle> candidateArticles = researchResult.getArticles();
             Map<String, Object> researchMetrics = researchResult.getMetrics();
-            log.info("[DIGEST_RUN #{}] STAGE 1 COMPLETED: Research returned {} candidate articles with full text for channel '{}'",
-                    runId, candidateArticles.size(), channel.getName());
+            log.info("[DIGEST_RUN #{}] STAGE 1 COMPLETED: Research returned {} candidate articles with full text for channel '{}' (freshnessWindowDays={})",
+                    runId, candidateArticles.size(), channel.getName(), freshnessWindowDays);
 
             if (candidateArticles.isEmpty()) {
                 log.warn("[DIGEST_RUN #{}] STAGE 1 WARNING: No articles were found/fetched for channel '{}'. Marking run as completed with 0 items.",
                         runId, channel.getName());
                 log.info("[DIGEST_RUN #{}] PIPELINE_METRICS targetCount={} research={} clusterRank=NA synthesize=NA factCheck=NA persisted=0",
-                        runId, channel.getArticleCount() != null ? channel.getArticleCount() : 10, researchMetrics);
+                        runId, targetCount, researchMetrics);
                 digestRun.setStatus(DigestRunStatus.SUCCESS);
                 digestRun.setEmailSent(false);
                 digestRun = digestRunRepository.save(digestRun);
@@ -82,7 +92,6 @@ public class DigestPipelineService {
             // Surface upstream starvation: if the raw candidate pool is smaller than the
             // requested target, the LLM cluster/rank step will be bypassed or thinned,
             // so flag it loudly for diagnostics.
-            int targetCount = channel.getArticleCount() != null ? channel.getArticleCount() : 10;
             if (candidateArticles.size() < targetCount) {
                 log.warn("[DIGEST_RUN #{}] Candidate pool size ({}) is smaller than targetCount ({}). Upstream research did not yield enough results.",
                         runId, candidateArticles.size(), targetCount);

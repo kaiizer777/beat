@@ -45,7 +45,10 @@ public class ResearchTestController {
         log.info("--- MANUAL TEST HARNESS TRIGGERED FOR TOPIC: '{}' ---", topic);
 
         long startTime = System.currentTimeMillis();
-        List<RawArticle> articles = researchPipelineService.executeResearch(topic).getArticles();
+        // Test harness: use the global default freshness (168h) and disable the broader-search
+        // fallback (targetCount=0) so the raw search behaviour is what we measure.
+        List<RawArticle> articles = researchPipelineService
+                .executeResearch(topic, 168, 0).getArticles();
         long duration = System.currentTimeMillis() - startTime;
 
         List<Map<String, Object>> articleSummaries = articles.stream().map(a -> {

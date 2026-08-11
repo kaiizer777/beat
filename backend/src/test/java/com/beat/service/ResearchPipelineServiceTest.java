@@ -35,7 +35,7 @@ public class ResearchPipelineServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(researchPipelineService, "maxAgeHours", 168);
+        ReflectionTestUtils.setField(researchPipelineService, "defaultMaxAgeHours", 168);
     }
 
     @Test
@@ -65,8 +65,9 @@ public class ResearchPipelineServiceTest {
         TinyFishFetchClient.FetchResult fetchResult = new TinyFishFetchClient.FetchResult("Full text content", "tinyfish");
         when(fetchClient.fetchContent(anyString())).thenReturn(fetchResult);
 
-        // Execute
-        List<RawArticle> finalPool = researchPipelineService.executeResearch("test").getArticles();
+        // Execute: pass freshness window 168h and targetCount=0 (no broader-search fallback)
+        List<RawArticle> finalPool = researchPipelineService
+                .executeResearch("test", 168, 0).getArticles();
 
         // Verify
         // Stale item (200 hours old) should be filtered out.
