@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -84,6 +85,34 @@ public class DigestPipelineService {
             log.info("[DIGEST_RUN #{}] STAGE 3: Starting Groq Call 2 (Synthesize Blurbs) for {} articles...", runId, rankedArticles.size());
             llmDigestService.synthesizeBlurbs(rankedArticles, channel.getTopicQuery(), currentInstant);
             log.info("[DIGEST_RUN #{}] STAGE 3 COMPLETED: Blurbs synthesized for {} articles", runId, rankedArticles.size());
+
+            // 3.5 Phase 5: Fact-Checking / Verification Stage
+            log.info("[DIGEST_RUN #{}] STAGE 3.5: Starting Fact-Checking for {} articles...", runId, rankedArticles.size());
+            List<RawArticle> verifiedArticles = new ArrayList<>();
+            int originalCount = rankedArticles.size();
+            for (RawArticle article : rankedArticles) {
+                Optional<String> verifiedBlurb = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
+                if (verifiedBlurb.isPresent()) {
+                    article.setSummaryBlurb(verifiedBlurb.get());
+                    verifiedArticles.add(article);
+                } else {
+                    log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'", runId, article.getTitle());
+                }
+            }
+            
+            int rejectedCount = originalCount - verifiedArticles.size();
+            log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected)", runId, verifiedArticles.size(), originalCount, rejectedCount);
+            
+            if (originalCount > 0 && ((double) rejectedCount / originalCount) > 0.5) {
+                String errorMsg = String.format("High rejection rate in fact-checking: %d out of %d articles rejected (>50%%)", rejectedCount, originalCount);
+                log.error("[DIGEST_RUN #{}] {}", runId, errorMsg);
+                digestRun.setErrorMessage(errorMsg);
+                // We don't fail the entire run; we let it continue with the surviving articles.
+                // The error_message field will surface the warning in the UI/logs.
+                digestRunRepository.save(digestRun);
+            }
+
+            rankedArticles = verifiedArticles;
 
             // 4. Persist NewsItem entities for each ranked story
             log.info("[DIGEST_RUN #{}] STAGE 4: Persisting {} NewsItem entities to Neon database...", runId, rankedArticles.size());

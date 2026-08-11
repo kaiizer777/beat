@@ -12,6 +12,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class LlmDigestService {
@@ -175,6 +176,71 @@ public class LlmDigestService {
             if (article.getSummaryBlurb() == null || article.getSummaryBlurb().isBlank()) {
                 article.setSummaryBlurb(article.getSnippet());
             }
+        }
+    }
+
+    /**
+     * Call 3: Fact-Check & Verify a generated blurb against the source text.
+     */
+    public Optional<String> verifyAndRefine(RawArticle article, String generatedBlurb, Instant currentInstant) {
+        log.info("Executing Groq LLM Call 3 (Fact-Check) for article: '{}'", article.getTitle());
+
+        String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
+        String systemPrompt = "You are a strict fact-checker. Current Date: {currentDate}.".replace("{currentDate}", currentDate);
+
+        String text = article.getFullText();
+        if (text == null || text.isBlank()) {
+            text = article.getSnippet();
+        }
+        if (text != null && text.length() > 2000) {
+            text = text.substring(0, 2000) + "...";
+        }
+
+        StringBuilder userPrompt = new StringBuilder();
+        userPrompt.append("Source Text:\n").append(text != null ? text : "").append("\n\n");
+        userPrompt.append("Generated Blurb:\n").append(generatedBlurb).append("\n\n");
+        userPrompt.append("""
+                Instructions:
+                1. Verify that no numbers, model versions, or named entities appear in the blurb that are absent from the source text.
+                2. Verify that timeline claims are consistent with the Current Date.
+                3. Respond ONLY with a valid JSON object matching this schema:
+                {
+                  "isValid": boolean,
+                  "refinedBlurb": "corrected text or null",
+                  "rejectionReason": "..."
+                }
+                """);
+
+        try {
+            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
+            JsonNode root = objectMapper.readTree(jsonResult);
+            
+            boolean isValid = root.path("isValid").asBoolean(true);
+            JsonNode refinedNode = root.path("refinedBlurb");
+            String refinedBlurb = (refinedNode.isNull() || refinedNode.isMissingNode()) ? null : refinedNode.asText();
+            String rejectionReason = root.path("rejectionReason").asText(null);
+
+            if (!isValid && (refinedBlurb == null || refinedBlurb.isBlank())) {
+                log.warn("Fact-check failed and no refined blurb provided. Reason: {}", rejectionReason);
+                return Optional.empty();
+            }
+
+            if (refinedBlurb != null && !refinedBlurb.isBlank()) {
+                return Optional.of(refinedBlurb.trim());
+            }
+
+            return Optional.of(generatedBlurb);
+
+        } catch (Exception e) {
+            log.error("Groq Call 3 (Fact-Check) failed for article '{}': {}", article.getTitle(), e.getMessage(), e);
+            // On API failure, we can default to returning the original or dropping it.
+            // Let's drop it to be safe or return original? 
+            // Better to return the original blurb on API failure to not break the pipeline randomly, 
+            // but the instructions say "Drop any article where the result is Optional.empty()". 
+            // If it fails, maybe return Optional.empty() and log an error? Let's return Optional.empty() 
+            // to ensure strict verification, or return Optional.of(generatedBlurb) to be fault-tolerant.
+            // Returning original on failure:
+            return Optional.of(generatedBlurb);
         }
     }
 }

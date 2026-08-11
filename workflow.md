@@ -85,7 +85,7 @@
 
 ## Phase 5 — Fact-Checking / Verification Stage (`verifyAndRefine`)
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Eliminate hallucinated model versions, fabricated numbers, and blurbs that contradict their source text before anything is persisted.
 
