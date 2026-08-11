@@ -60,12 +60,13 @@ public class LlmDigestService {
                 You are an expert news editor. Your job is to select and rank the top unique, high-quality news articles for a research digest topic.
                 1. Identify duplicate stories covering the exact same news event and pick the best single coverage source.
                 2. Rank the top unique articles by relevance and RECENCY. Penalize or discard articles that appear outdated relative to the Current Date.
-                3. Respond ONLY with a valid JSON object matching this schema:
+                3. You MUST select EXACTLY {targetCount} articles (unless there are fewer valid candidates available).
+                4. Respond ONLY with a valid JSON object matching this schema:
                 {
                   "rankedIndices": [index1, index2, index3, ...]
                 }
                 Do not include markdown preamble, formatting fences, or any other text outside the JSON object.
-                """.replace("{currentDate}", currentDate);
+                """.replace("{currentDate}", currentDate).replace("{targetCount}", String.valueOf(targetCount));
 
         try {
             String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
