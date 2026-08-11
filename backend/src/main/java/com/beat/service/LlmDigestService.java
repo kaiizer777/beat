@@ -144,9 +144,14 @@ public class LlmDigestService {
             userPrompt.append("Content: ").append(text != null ? text : "").append("\n\n");
         }
 
+        // Schema placeholders only. The previous version of this code used a long
+        // repeated real-example in the schema (15 copies of a 50-word blurb). That ate
+        // the output token budget and made the model produce 1-sentence blurbs even
+        // though the prompt said "2-3 sentences". Short placeholders + a clear sentence
+        // in the system prompt is the sweet spot.
         StringBuilder exampleBlurbs = new StringBuilder("[\n");
         for (int i = 0; i < rankedArticles.size(); i++) {
-            exampleBlurbs.append("    \"2-3 sentence blurb for Article [").append(i).append("]\"");
+            exampleBlurbs.append("    \"2-3 sentence blurb for Article [").append(i).append("]...\"");
             if (i < rankedArticles.size() - 1) exampleBlurbs.append(",");
             exampleBlurbs.append("\n");
         }
@@ -157,12 +162,13 @@ public class LlmDigestService {
                 Current Date: {currentDate}. Evaluate all claims of recency (e.g., "new", "just announced", "latest") strictly relative to this date.
                 You are a senior analyst producing concise news summaries.
                 For each provided article in sequence (Article [0], Article [1], etc.), generate a clear 2-3 sentence 'why it matters' synthesis blurb.
-                
+
                 CRITICAL RULES:
                 - Do NOT extrapolate, infer, or invent model versions, software names, release dates, or statistics.
                 - Every claim in the blurb MUST be directly derivable from the provided source text.
                 - The blurb must be 100% derivative of the provided text. No external knowledge.
-                
+                - If the source text is a short snippet, the blurb should still be 2-3 sentences — use the headline and source to make sense of the snippet, but never invent details.
+
                 - Base each blurb strictly on the provided text for that article.
                 - Do not invent claims, outside knowledge, or speculation.
                 - Respond ONLY with a valid JSON object matching this schema:
@@ -185,6 +191,26 @@ public class LlmDigestService {
                     }
                 }
                 log.info("Groq Call 2 (Synthesize Blurbs) completed successfully for {} articles", blurbsNode.size());
+
+                // Quality safety net: llama-3.3-70b-versatile occasionally emits 1-sentence
+                // blurbs (~25 words) instead of the 2-3 sentences the prompt asked for. Detect
+                // any short blurb and re-call Groq with a focused "expand this" prompt. Targeted
+                // re-calls are cheap (one article at a time) and only fire when needed.
+                int expanded = 0;
+                for (int i = 0; i < rankedArticles.size() && i < blurbsNode.size(); i++) {
+                    RawArticle article = rankedArticles.get(i);
+                    String current = article.getSummaryBlurb();
+                    if (current == null || isShortBlurb(current)) {
+                        String expanded_ = expandShortBlurb(article, current, currentInstant);
+                        if (expanded_ != null && !expanded_.isBlank()) {
+                            article.setSummaryBlurb(expanded_);
+                            expanded++;
+                        }
+                    }
+                }
+                if (expanded > 0) {
+                    log.info("Synthesize safety net: expanded {} short blurb(s) via targeted re-call", expanded);
+                }
                 return;
             } else {
                 log.warn("Groq Call 2 returned non-array blurbs. Falling back to snippets");
@@ -193,12 +219,115 @@ public class LlmDigestService {
             log.error("Groq Call 2 (Synthesize Blurbs) failed: {}", e.getMessage(), e);
         }
 
-        // Fallback: set summary blurb to snippet if synthesis failed
+        // Fallback: when synthesis failed or returned no blurbs, use the search snippet
+        // as the base. The snippet is typically 1-2 sentences (~120-140 chars), which is
+        // too short for the digest UI. If we landed on a short blurb via this path, expand
+        // it with a templated 2nd sentence so the user gets the "2-3 sentence" reading
+        // experience even when the LLM is unavailable.
         for (RawArticle article : rankedArticles) {
             if (article.getSummaryBlurb() == null || article.getSummaryBlurb().isBlank()) {
-                article.setSummaryBlurb(article.getSnippet());
+                String snippet = article.getSnippet();
+                if (snippet != null && !snippet.isBlank()) {
+                    article.setSummaryBlurb(expandShortSnippet(snippet, article));
+                }
             }
         }
+    }
+
+    /**
+     * Wrap a short search snippet into a 2-sentence blurb by appending a templated
+     * "why it matters" line. Used only as a fallback when the synthesize LLM call
+     * failed (typically due to Groq TPD exhaustion). Kept simple and deterministic —
+     * we explicitly do NOT call Groq again, both because the limit is the reason we
+     * are here, and because templated text is fine for a degraded-mode blurb.
+     */
+    private String expandShortSnippet(String snippet, RawArticle article) {
+        String trimmed = snippet.trim();
+        // Ensure snippet ends with terminal punctuation so the appended sentence reads naturally.
+        char last = trimmed.isEmpty() ? '.' : trimmed.charAt(trimmed.length() - 1);
+        if (last != '.' && last != '!' && last != '?') {
+            trimmed = trimmed + ".";
+        }
+        String publisher = article.getPublisher() != null && !article.getPublisher().isBlank()
+                ? article.getPublisher() : "the source";
+        // Templated 2nd sentence. Avoids "external knowledge" since it only restates that
+        // the item is reporting current industry activity and points the reader at the
+        // publisher for the full story.
+        return trimmed + " Reported by " + publisher + ", the story reflects an active beat "
+                + "the digest tracks and is worth a click-through to read in full.";
+    }
+
+    /**
+     * Heuristic: a blurb is "short" if it has fewer than ~30 words OR fewer than 2 sentences.
+     * llama-3.3-70b-versatile occasionally under-emits in the 15-blurb batch call; this
+     * catches those cases so the safety-net re-call can fire.
+     */
+    private boolean isShortBlurb(String blurb) {
+        if (blurb == null || blurb.isBlank()) return true;
+        String trimmed = blurb.trim();
+        if (trimmed.endsWith("...") || trimmed.endsWith("…")) return true;  // mid-thought truncation
+        // Count sentences by terminal punctuation. A "good" blurb has at least 2.
+        int sentences = trimmed.split("[.!?]+").length;
+        if (sentences < 2) return true;
+        // Word count threshold. A 2-sentence blurb with 10 words isn't useful either.
+        String[] words = trimmed.split("\\s+");
+        return words.length < 30;
+    }
+
+    /**
+     * Safety-net re-call for a blurb that the main synth run under-emitted. Asks the
+     * model to expand the specific blurb to 2-3 sentences while staying 100% derivative
+     * of the source text. Returns the expanded blurb, or null on failure (caller keeps
+     * the short one — better than dropping the article).
+     */
+    private String expandShortBlurb(RawArticle article, String shortBlurb, Instant currentInstant) {
+        String text = article.getFullText();
+        if (text == null || text.isBlank()) {
+            text = article.getSnippet();
+        }
+        if (text != null && text.length() > 1500) {
+            text = text.substring(0, 1500) + "...";
+        }
+
+        String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
+        String systemPrompt = """
+                Current Date: {currentDate}.
+                You are expanding a too-short blurb. The blurb below was generated for a news article but
+                only covers 1 sentence. Rewrite it as 2-3 complete sentences (50-90 words) that:
+                - Sentence 1: a concrete fact drawn from the source text.
+                - Sentence 2: why this is significant to a professional reader.
+                - Sentence 3 (optional): broader implication or context.
+                Stay 100% derivative of the source text. No external knowledge. No invented stats, models, or
+                numbers. Never end with "..." or "and more". Finish every thought.
+
+                Respond ONLY with a valid JSON object: {"blurb": "<the expanded blurb>"}
+                """.replace("{currentDate}", currentDate);
+
+        StringBuilder userPrompt = new StringBuilder();
+        userPrompt.append("Title: ").append(article.getTitle()).append("\n");
+        userPrompt.append("Source: ").append(article.getPublisher() != null ? article.getPublisher() : "Unknown").append("\n\n");
+        userPrompt.append("Source Text:\n").append(text != null ? text : "").append("\n\n");
+        userPrompt.append("Current (too short) blurb: ").append(shortBlurb != null ? shortBlurb : "").append("\n");
+
+        try {
+            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
+            JsonNode root = objectMapper.readTree(jsonResult);
+            JsonNode blurbNode = root.path("blurb");
+            if (blurbNode.isMissingNode()) {
+                // Some models might wrap in array; tolerate either shape.
+                JsonNode alt = root.path("blurbs");
+                if (alt.isArray() && alt.size() > 0) blurbNode = alt.get(0);
+            }
+            if (!blurbNode.isMissingNode()) {
+                String expanded = blurbNode.asText().trim();
+                if (!expanded.isBlank() && !isShortBlurb(expanded)) {
+                    return expanded;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("expandShortBlurb failed for '{}': {}", article.getTitle(), e.getMessage());
+        }
+        return null;
     }
 
     /**
