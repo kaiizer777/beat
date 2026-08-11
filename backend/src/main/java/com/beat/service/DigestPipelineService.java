@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -100,22 +99,27 @@ public class DigestPipelineService {
             List<RawArticle> verifiedArticles = new ArrayList<>();
             int originalCount = rankedArticles.size();
             for (RawArticle article : rankedArticles) {
-                Optional<String> verifiedBlurb = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
-                if (verifiedBlurb.isPresent()) {
-                    article.setSummaryBlurb(verifiedBlurb.get());
+                LlmDigestService.VerificationResult verifyResult = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
+                if (verifyResult.isAccepted()) {
+                    article.setSummaryBlurb(verifyResult.getRefinedBlurb());
                     verifiedArticles.add(article);
                 } else {
-                    log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'", runId, article.getTitle());
+                    log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'. Reason: {}",
+                            runId, article.getTitle(), verifyResult.getRejectionReason());
                 }
             }
-            
+
             int rejectedCount = originalCount - verifiedArticles.size();
             log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected)", runId, verifiedArticles.size(), originalCount, rejectedCount);
-            
+
+            // Workflow.md Phase 5 step 5: "error budget" — if >50% of articles are
+            // rejected, log an ERROR and surface it in digest_run.error_message. This
+            // is a soft signal of a systemic prompt or data problem; the run continues
+            // with the articles that DID verify so the user still gets a digest.
             if (originalCount > 0 && ((double) rejectedCount / originalCount) > 0.5) {
-                String errorMsg = String.format("High rejection rate in fact-checking: %d out of %d articles rejected (>50%%)", rejectedCount, originalCount);
+                String errorMsg = String.format("High rejection rate in fact-checking: %d out of %d articles rejected (>50%%). Possible systemic prompt or data issue.", rejectedCount, originalCount);
                 log.error("[DIGEST_RUN #{}] {}", runId, errorMsg);
-                throw new IllegalStateException(errorMsg);
+                digestRun.setErrorMessage(errorMsg);
             }
 
             rankedArticles = verifiedArticles;

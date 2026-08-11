@@ -203,8 +203,12 @@ public class LlmDigestService {
 
     /**
      * Call 3: Fact-Check & Verify a generated blurb against the source text.
+     *
+     * @return VerificationResult with the (possibly refined) blurb on success, or a
+     *         rejectionReason on failure. Callers should check {@code isAccepted()}
+     *         to decide whether to keep the article in the digest.
      */
-    public Optional<String> verifyAndRefine(RawArticle article, String generatedBlurb, Instant currentInstant) {
+    public VerificationResult verifyAndRefine(RawArticle article, String generatedBlurb, Instant currentInstant) {
         log.info("Executing Groq LLM Call 3 (Fact-Check) for article: '{}'", article.getTitle());
 
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
@@ -225,12 +229,12 @@ public class LlmDigestService {
                 Instructions:
                 1. Verify that no numbers, model versions, or named entities appear in the blurb that are absent from the source text.
                 2. Verify that timeline claims are consistent with the Current Date.
-                
+
                 CRITICAL RULES FOR REFINED BLURB:
                 - If you generate a refinedBlurb, do NOT extrapolate, infer, or invent model versions, software names, release dates, or statistics.
                 - Every claim in the refinedBlurb MUST be directly derivable from the provided source text.
                 - The refinedBlurb must be 100% derivative of the provided text. No external knowledge.
-                
+
                 3. Respond ONLY with a valid JSON object matching this schema:
                 {
                   "isValid": boolean,
@@ -242,26 +246,63 @@ public class LlmDigestService {
         try {
             String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
             JsonNode root = objectMapper.readTree(jsonResult);
-            
+
             boolean isValid = root.path("isValid").asBoolean(true);
             JsonNode refinedNode = root.path("refinedBlurb");
             String refinedBlurb = (refinedNode.isNull() || refinedNode.isMissingNode()) ? null : refinedNode.asText();
             String rejectionReason = root.path("rejectionReason").asText(null);
 
-            if (!isValid && (refinedBlurb == null || refinedBlurb.isBlank())) {
-                log.warn("Fact-check failed and no refined blurb provided. Reason: {}", rejectionReason);
-                return Optional.empty();
+            // Accept: LLM says valid (no refined blurb) -> use original.
+            if (isValid && (refinedBlurb == null || refinedBlurb.isBlank())) {
+                return VerificationResult.accepted(generatedBlurb);
             }
 
+            // Accept: LLM provided a refined blurb (regardless of isValid flag) -> use refined.
             if (refinedBlurb != null && !refinedBlurb.isBlank()) {
-                return Optional.of(refinedBlurb.trim());
+                return VerificationResult.accepted(refinedBlurb.trim());
             }
 
-            return Optional.of(generatedBlurb);
+            // Reject: invalid and no refined blurb available.
+            log.warn("Fact-check failed and no refined blurb provided. Reason: {}", rejectionReason);
+            return VerificationResult.rejected(rejectionReason != null ? rejectionReason : "unspecified");
 
         } catch (Exception e) {
             log.error("Groq Call 3 (Fact-Check) failed for article '{}': {}", article.getTitle(), e.getMessage(), e);
-            return Optional.empty();
+            return VerificationResult.rejected("fact-check call failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Result of a single fact-check invocation. Either carries an accepted blurb
+     * (possibly refined), or a rejection reason.
+     */
+    public static final class VerificationResult {
+        private final String refinedBlurb;
+        private final String rejectionReason;
+
+        private VerificationResult(String refinedBlurb, String rejectionReason) {
+            this.refinedBlurb = refinedBlurb;
+            this.rejectionReason = rejectionReason;
+        }
+
+        public static VerificationResult accepted(String refinedBlurb) {
+            return new VerificationResult(refinedBlurb, null);
+        }
+
+        public static VerificationResult rejected(String rejectionReason) {
+            return new VerificationResult(null, rejectionReason);
+        }
+
+        public boolean isAccepted() {
+            return refinedBlurb != null;
+        }
+
+        public String getRefinedBlurb() {
+            return refinedBlurb;
+        }
+
+        public String getRejectionReason() {
+            return rejectionReason;
         }
     }
 }
