@@ -42,6 +42,9 @@ public class Channel {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "freshness_window_days", nullable = false, columnDefinition = "integer default 7")
+    private Integer freshnessWindowDays = 7;
+
     @NotBlank
     @Column(name = "user_id", nullable = false)
     private String userId;
@@ -142,6 +145,14 @@ public class Channel {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public Integer getFreshnessWindowDays() {
+        return freshnessWindowDays;
+    }
+
+    public void setFreshnessWindowDays(Integer freshnessWindowDays) {
+        this.freshnessWindowDays = freshnessWindowDays;
     }
 
     public String getUserId() {
