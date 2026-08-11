@@ -245,14 +245,7 @@ public class LlmDigestService {
 
         } catch (Exception e) {
             log.error("Groq Call 3 (Fact-Check) failed for article '{}': {}", article.getTitle(), e.getMessage(), e);
-            // On API failure, we can default to returning the original or dropping it.
-            // Let's drop it to be safe or return original? 
-            // Better to return the original blurb on API failure to not break the pipeline randomly, 
-            // but the instructions say "Drop any article where the result is Optional.empty()". 
-            // If it fails, maybe return Optional.empty() and log an error? Let's return Optional.empty() 
-            // to ensure strict verification, or return Optional.of(generatedBlurb) to be fault-tolerant.
-            // Returning original on failure:
-            return Optional.of(generatedBlurb);
+            return Optional.empty();
         }
     }
 }

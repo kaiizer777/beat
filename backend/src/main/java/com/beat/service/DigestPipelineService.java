@@ -106,10 +106,7 @@ public class DigestPipelineService {
             if (originalCount > 0 && ((double) rejectedCount / originalCount) > 0.5) {
                 String errorMsg = String.format("High rejection rate in fact-checking: %d out of %d articles rejected (>50%%)", rejectedCount, originalCount);
                 log.error("[DIGEST_RUN #{}] {}", runId, errorMsg);
-                digestRun.setErrorMessage(errorMsg);
-                // We don't fail the entire run; we let it continue with the surviving articles.
-                // The error_message field will surface the warning in the UI/logs.
-                digestRunRepository.save(digestRun);
+                throw new IllegalStateException(errorMsg);
             }
 
             rankedArticles = verifiedArticles;
