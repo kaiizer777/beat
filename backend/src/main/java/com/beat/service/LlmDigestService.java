@@ -139,6 +139,12 @@ public class LlmDigestService {
                 Current Date: {currentDate}. Evaluate all claims of recency (e.g., "new", "just announced", "latest") strictly relative to this date.
                 You are a senior analyst producing concise news summaries.
                 For each provided article in sequence (Article [0], Article [1], etc.), generate a clear 2-3 sentence 'why it matters' synthesis blurb.
+                
+                CRITICAL RULES:
+                - Do NOT extrapolate, infer, or invent model versions, software names, release dates, or statistics.
+                - Every claim in the blurb MUST be directly derivable from the provided source text.
+                - The blurb must be 100% derivative of the provided text. No external knowledge.
+                
                 - Base each blurb strictly on the provided text for that article.
                 - Do not invent claims, outside knowledge, or speculation.
                 - Respond ONLY with a valid JSON object matching this schema:
@@ -203,6 +209,12 @@ public class LlmDigestService {
                 Instructions:
                 1. Verify that no numbers, model versions, or named entities appear in the blurb that are absent from the source text.
                 2. Verify that timeline claims are consistent with the Current Date.
+                
+                CRITICAL RULES FOR REFINED BLURB:
+                - If you generate a refinedBlurb, do NOT extrapolate, infer, or invent model versions, software names, release dates, or statistics.
+                - Every claim in the refinedBlurb MUST be directly derivable from the provided source text.
+                - The refinedBlurb must be 100% derivative of the provided text. No external knowledge.
+                
                 3. Respond ONLY with a valid JSON object matching this schema:
                 {
                   "isValid": boolean,

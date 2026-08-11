@@ -106,7 +106,7 @@
 
 ## Phase 6 — Anti-Hallucination Prompt Guardrails
 
-- [ ] **Completed**
+- [x] **Completed**
 
 **Goal**: Harden the `synthesizeBlurbs` prompt itself as a first line of defense, reducing the verification stage's rejection rate.
 
