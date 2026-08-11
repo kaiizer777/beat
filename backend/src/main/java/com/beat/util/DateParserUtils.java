@@ -2,6 +2,7 @@ package com.beat.util;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -34,11 +35,26 @@ public class DateParserUtils {
 
         String cleaned = rawDate.trim();
 
-        // 1. Try ISO-8601 parsing directly
+        // 1. Try ISO-8601 parsing directly (handles "2026-08-10T14:00:00Z")
         try {
             return Instant.parse(cleaned);
         } catch (DateTimeParseException ignored) {
-            // Not ISO-8601, continue
+            // Not ISO-8601 with Z, continue
+        }
+
+        // 1b. Try ISO with numeric offset (handles "2026-08-10T14:00:00+05:30")
+        try {
+            return OffsetDateTime.parse(cleaned).toInstant();
+        } catch (DateTimeParseException ignored) {
+            // Not ISO with offset, continue
+        }
+
+        // 1c. Try RFC 1123 / HTTP-date (handles "Tue, 12 Aug 2026 14:00:00 GMT"),
+        // commonly emitted by web APIs and search backends like TinyFish.
+        try {
+            return DateTimeFormatter.RFC_1123_DATE_TIME.parse(cleaned, Instant::from);
+        } catch (DateTimeParseException ignored) {
+            // Not RFC 1123, continue
         }
 
         // 2. Try Relative times
@@ -47,7 +63,7 @@ public class DateParserUtils {
             try {
                 int amount = Integer.parseInt(relativeMatcher.group(1));
                 String unitStr = relativeMatcher.group(2).toLowerCase();
-                
+
                 ChronoUnit unit;
                 if (unitStr.startsWith("min")) {
                     unit = ChronoUnit.MINUTES;
@@ -58,7 +74,7 @@ public class DateParserUtils {
                 } else {
                     return null;
                 }
-                
+
                 return Instant.now().minus(amount, unit);
             } catch (NumberFormatException ignored) {
             }

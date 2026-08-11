@@ -99,8 +99,10 @@ public class ResearchPipelineService {
         List<RawArticle> deduplicatedCandidates = deduplicationService.deduplicate(rawCandidateList);
         log.info("Candidate pool size after initial deduplication: {}", deduplicatedCandidates.size());
 
-        // Limit maximum candidate fetches per run to prevent excessive overhead (e.g. max 35 articles)
-        int fetchLimit = Math.min(deduplicatedCandidates.size(), 35);
+        // Limit maximum candidate fetches per run to prevent excessive overhead.
+        // Raised to 50 so digest runs with targetCount up to 15 have headroom after
+        // freshness filter + dedup + fact-checker rejection (~30% drop).
+        int fetchLimit = Math.min(deduplicatedCandidates.size(), 50);
         List<RawArticle> fetchedArticles = new ArrayList<>();
 
         // 4. Fetch full text for candidates using TinyFish Fetch + Jina fallback
@@ -149,17 +151,21 @@ public class ResearchPipelineService {
     private List<String> generateSubQueries(String topic) {
         String trimmed = topic.trim();
         List<String> queries = new ArrayList<>();
-        // Keep the base topic unchanged so search engines can apply their own relevance ranking.
+        // Base topic unchanged so the search engine applies its default relevance ranking.
         queries.add(trimmed);
-        // Broaden with a generic "news" qualifier instead of strict temporal strings.
-        // Strict qualifiers like " this week" / " latest news" cause the search API to
-        // return 0 results; the temporal filter is already enforced downstream by the
-        // Java Freshness Filter (digest.freshness.max-age-hours).
+        // Generic "news" qualifier — broadens coverage without forcing a strict
+        // temporal phrase that breaks the upstream search API.
         queries.add(trimmed + " news");
-        // Anchor one query to the current year so we still bias toward recent content
-        // without forcing a strict temporal phrase that breaks the search backend.
+        // Current-year anchor biases results toward recent content; the Java
+        // Freshness Filter enforces the exact temporal window downstream.
         String currentYear = String.valueOf(Year.now().getValue());
         queries.add(trimmed + " " + currentYear);
+        // Semantic qualifiers that pull in different article classes (analytical
+        // pieces, formal reports) the bare "news" query often misses. Critical
+        // for reaching larger targetCounts (e.g. 10-15) where the default 3
+        // sub-queries don't produce enough unique raw candidates.
+        queries.add(trimmed + " analysis");
+        queries.add(trimmed + " report");
         return queries;
     }
 }
