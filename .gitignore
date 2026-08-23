@@ -38,3 +38,14 @@ yarn-error.log*
 *.iws
 .DS_Store
 Thumbs.db
+*.log
+
+# Markdown files in root except README
+/*.md
+!/README.md
+!/readme.md
+
+# Scratch & metrics artifacts
+*.txt
+pipeline-*.json
+

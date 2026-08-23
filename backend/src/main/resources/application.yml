@@ -38,6 +38,13 @@ resend:
   recipient-email: ${DIGEST_RECIPIENT_EMAIL}
   from-email: ${RESEND_FROM_EMAIL}
 
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  from-email: ${BREVO_FROM_EMAIL:Beat Digest <noreply@brevo.com>}
+
+email:
+  resend-target: ${EMAIL_RESEND_TARGET:kaizerxdev@gmail.com}
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
 

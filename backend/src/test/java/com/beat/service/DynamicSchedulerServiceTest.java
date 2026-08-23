@@ -48,10 +48,12 @@ class DynamicSchedulerServiceTest {
     }
 
     @Test
-    void testIsDue_OutsidePollingWindow_ReturnsFalse() {
+    void testIsDue_BeforeScheduledTime_RanYesterday_ReturnsFalse() {
         Channel channel = new Channel("user1", "AI News", "AI", 10, LocalTime.of(8, 0), "Asia/Kolkata", true);
-        // Poll runs at 08:15 Asia/Kolkata (>10 min window)
-        Instant now = ZonedDateTime.of(2026, 8, 2, 8, 15, 0, 0, ZoneId.of("Asia/Kolkata")).toInstant();
+        // Poll runs at 07:55 Asia/Kolkata (before scheduled 08:00)
+        Instant now = ZonedDateTime.of(2026, 8, 2, 7, 55, 0, 0, ZoneId.of("Asia/Kolkata")).toInstant();
+        Instant lastRunYesterday = ZonedDateTime.of(2026, 8, 1, 8, 1, 0, 0, ZoneId.of("Asia/Kolkata")).toInstant();
+        channel.setLastRunAt(lastRunYesterday);
 
         assertFalse(dynamicSchedulerService.isDue(channel, now));
     }

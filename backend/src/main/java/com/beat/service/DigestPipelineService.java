@@ -201,7 +201,7 @@ public class DigestPipelineService {
             log.info("[DIGEST_RUN #{}] PIPELINE_METRICS {}", runId, allMetrics);
 
             // 5. Phase 6: Email Delivery
-            log.info("[DIGEST_RUN #{}] STAGE 5: Triggering Email Delivery via Resend...", runId);
+            log.info("[DIGEST_RUN #{}] STAGE 5: Triggering Email Delivery via EmailRouter...", runId);
             boolean emailSent = false;
             try {
                 emailSent = emailService.sendDigestEmail(channel, digestRun, newsItems);
