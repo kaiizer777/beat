@@ -4,11 +4,16 @@ import Resend from "next-auth/providers/resend";
 import { prisma } from "@/lib/prisma";
 import { SignJWT, jwtVerify } from "jose";
 
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
+const resendApiKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY || "";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  trustHost: true,
+  secret: authSecret,
   providers: [
     Resend({
-      apiKey: process.env.AUTH_RESEND_KEY,
+      apiKey: resendApiKey,
       from: process.env.RESEND_FROM_EMAIL || "Beat Digest <onboarding@resend.dev>",
     }),
   ],
@@ -18,7 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   jwt: {
     async encode({ token }) {
       if (!token) return "";
-      const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+      const secret = new TextEncoder().encode(authSecret);
       return new SignJWT({ ...token })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
@@ -28,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async decode({ token }) {
       if (!token) return null;
       try {
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+        const secret = new TextEncoder().encode(authSecret);
         const { payload } = await jwtVerify(token, secret, {
           algorithms: ["HS256"],
         });
@@ -42,7 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string;
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+        const secret = new TextEncoder().encode(authSecret);
         session.accessToken = await new SignJWT({
           sub: token.sub,
           email: token.email,
@@ -63,4 +68,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
-
