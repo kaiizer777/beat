@@ -46,7 +46,7 @@ email:
   resend-target: ${EMAIL_RESEND_TARGET:kaizerxdev@gmail.com}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://beat-alpha.vercel.app,https://*.vercel.app}
 
 auth:
   secret: ${AUTH_SECRET}

@@ -29,7 +29,7 @@ public class SecurityConfig {
     @Value("${auth.secret}")
     private String authSecret;
 
-    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001,https://beat-alpha.vercel.app,https://*.vercel.app}")
     private String allowedOrigins;
 
     @Bean
@@ -63,7 +63,7 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
-        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
