@@ -328,7 +328,7 @@ export default function Home() {
           {/* Empty State */}
           {!isLoading && !error && filteredChannels.length === 0 && (
             totalChannels === 0 ? (
-              <div className="my-8 flex flex-col items-center justify-center rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950 p-8 sm:p-12 text-center shadow-xl backdrop-blur-md">
+              <div className="my-8 flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950 p-8 sm:p-12 text-center shadow-xl backdrop-blur-md">
                 <h3 className="text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
                   Welcome to Beat Research
                 </h3>
@@ -338,25 +338,25 @@ export default function Home() {
 
                 {/* 3 Step Onboarding Flow */}
                 <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 max-w-3xl w-full text-left">
-                  <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-4">
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
                     <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500/20 text-[11px]">1</span>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">1</span>
                       <span>Choose Topic</span>
                     </div>
                     <p className="text-xs text-slate-400">Specify any keyword or query, like &quot;AI Hardware&quot; or &quot;Biotech&quot;.</p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-4">
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
                     <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500/20 text-[11px]">2</span>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">2</span>
                       <span>Set Schedule</span>
                     </div>
                     <p className="text-xs text-slate-400">Pick your daily delivery time, timezone, and article count.</p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-800/80 bg-slate-900/50 p-4">
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
                     <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500/20 text-[11px]">3</span>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">3</span>
                       <span>Receive Digests</span>
                     </div>
                     <p className="text-xs text-slate-400">Beat automatically fetches, ranks, and emails synthesized reports.</p>
@@ -368,7 +368,7 @@ export default function Home() {
                     setEditingChannel(null);
                     setIsFormModalOpen(true);
                   }}
-                  className="mt-8 flex items-center space-x-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-6 py-3.5 text-sm sm:text-base font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[4px] border-b-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition transform hover:-translate-y-0.5 focus:outline-none"
+                  className="mt-8 flex items-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-6 py-3 text-sm sm:text-base font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition transform hover:-translate-y-0.5 focus:outline-none"
                 >
                   <Plus className="h-5 w-5 text-cyan-400" />
                   <span>Create Your First Channel</span>
