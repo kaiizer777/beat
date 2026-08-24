@@ -473,9 +473,6 @@ export default function ChannelDetailPage() {
                       <h3 className="text-lg font-bold text-amber-200">
                         Digest Pipeline Executing
                       </h3>
-                      <p className="mt-2 max-w-md text-xs text-amber-200/80 leading-relaxed">
-                        Beat is actively conducting web research via TinyFish API and synthesizing insights with Groq Llama 3.3 70B.
-                      </p>
 
                       {/* 3 Step Execution Progress Bar */}
                       <div className="mt-6 grid grid-cols-3 gap-2 w-full max-w-md text-left">
