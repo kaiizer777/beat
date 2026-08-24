@@ -329,10 +329,7 @@ export default function Home() {
           {!isLoading && !error && filteredChannels.length === 0 && (
             totalChannels === 0 ? (
               <div className="my-8 flex flex-col items-center justify-center rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950 p-8 sm:p-12 text-center shadow-xl backdrop-blur-md">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-                  <Radio className="h-10 w-10 animate-pulse" />
-                </div>
-                <h3 className="mt-6 text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
+                <h3 className="text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
                   Welcome to Beat Research
                 </h3>
                 <p className="mt-3 max-w-lg text-sm sm:text-base text-slate-300 leading-relaxed">
