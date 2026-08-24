@@ -52,9 +52,9 @@ export function Header({ onOpenCreateModal, isBackendOnline }: HeaderProps) {
           {onOpenCreateModal && (
             <button
               onClick={onOpenCreateModal}
-              className="flex items-center space-x-2 rounded-xl bg-cyan-600 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white border-x border-t border-cyan-500 border-b-[4px] border-b-cyan-800 shadow-[0_4px_10px_rgba(6,182,212,0.3)] focus:outline-none"
+              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition focus:outline-none"
             >
-              <PlusCircle className="h-4 w-4" />
+              <PlusCircle className="h-4 w-4 text-cyan-400" />
               <span className="hidden sm:inline">New Channel</span>
               <span className="sm:hidden">New</span>
             </button>
