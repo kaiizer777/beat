@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { PlusCircle, Activity, Radio } from 'lucide-react';
+import { PlusCircle, Activity } from 'lucide-react';
 import { AuthNav } from './AuthNav';
 
 interface HeaderProps {
@@ -15,10 +15,6 @@ export function Header({ onOpenCreateModal, isBackendOnline }: HeaderProps) {
     <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-black/85 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
         <Link href="/" className="group flex items-center space-x-3 transition">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-md shadow-cyan-500/25 border border-cyan-400/30 group-hover:shadow-cyan-500/50 group-hover:scale-105 transition-all duration-200">
-            <Radio className="h-4.5 w-4.5 text-white" />
-          </div>
-
           <div>
             <div className="flex items-center space-x-1.5">
               <h1 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_2px_12px_rgba(6,182,212,0.25)]">
