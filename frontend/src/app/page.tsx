@@ -189,18 +189,19 @@ export default function Home() {
   const activeChannels = channels.filter((c) => c.isActive).length;
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white relative">
-      {/* Enhanced Ambient Background System */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        {/* Subtle grid pattern with radial spotlight mask */}
-        <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_65%,transparent_100%)] opacity-50" />
-        
-        {/* Center-top ambient cyan spotlight cone */}
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[550px] w-[950px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none" />
-        
-        {/* Deep ambient peripheral atmospheric glows */}
-        <div className="absolute top-1/4 -right-48 h-[400px] w-[400px] rounded-full bg-blue-600/10 blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/2 -left-48 h-[400px] w-[400px] rounded-full bg-cyan-600/8 blur-[140px] pointer-events-none" />
+    <div className="min-h-screen bg-[#030712] text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white">
+      {/* ── Atmospheric background layer ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-dot-grid">
+        {/* Deep radial vignette so edges feel contained */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,182,212,0.07)_0%,transparent_70%)]" />
+        {/* Aurora orb 1 — cyan top-left */}
+        <div className="aurora-orb-1 absolute -top-32 -left-24 h-[520px] w-[520px] rounded-full bg-cyan-500/[0.10] blur-[100px]" />
+        {/* Aurora orb 2 — blue top-right */}
+        <div className="aurora-orb-2 absolute -top-20 right-0 h-[440px] w-[440px] rounded-full bg-blue-600/[0.09] blur-[90px]" />
+        {/* Aurora orb 3 — indigo mid-left */}
+        <div className="aurora-orb-3 absolute top-[45%] -left-32 h-[360px] w-[360px] rounded-full bg-indigo-600/[0.07] blur-[80px]" />
+        {/* Subtle bottom glow */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-64 w-[70%] rounded-full bg-cyan-900/[0.08] blur-[80px]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
@@ -217,7 +218,7 @@ export default function Home() {
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           {/* Top Info Banner & Stats */}
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 <Radio className="h-6 w-6" />
               </div>
@@ -227,7 +228,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Zap className="h-6 w-6" />
               </div>
@@ -237,7 +238,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
                 <Layers className="h-6 w-6" />
               </div>
@@ -257,7 +258,7 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search channels by name or topic..."
-                className="w-full rounded-xl border border-white/[0.08] bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-inner backdrop-blur-md focus:border-cyan-500/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/90 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-inner focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
               />
             </div>
 
