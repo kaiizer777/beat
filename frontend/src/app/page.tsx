@@ -368,9 +368,9 @@ export default function Home() {
                     setEditingChannel(null);
                     setIsFormModalOpen(true);
                   }}
-                  className="mt-8 flex items-center space-x-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-xl shadow-cyan-500/25 hover:from-cyan-400 hover:to-blue-500 transition transform hover:-translate-y-0.5"
+                  className="mt-8 flex items-center space-x-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-6 py-3.5 text-sm sm:text-base font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[4px] border-b-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition transform hover:-translate-y-0.5 focus:outline-none"
                 >
-                  <Plus className="h-5 w-5" />
+                  <Plus className="h-5 w-5 text-cyan-400" />
                   <span>Create Your First Channel</span>
                 </button>
               </div>
