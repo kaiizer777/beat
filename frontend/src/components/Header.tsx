@@ -21,9 +21,6 @@ export function Header({ onOpenCreateModal, isBackendOnline }: HeaderProps) {
               <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl drop-shadow-md">
                 BEAT
               </h1>
-              <span className="rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-bold text-cyan-400 border border-cyan-500/20 shadow-[0_2px_4px_rgba(0,0,0,0.2)]">
-                v1.0
-              </span>
             </div>
             <p className="hidden sm:block text-[11px] text-slate-400">
               Personalized News & Intelligence Pipeline
