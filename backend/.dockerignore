@@ -1,0 +1,17 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+*.log
+.env
+.env.local
+.git
+.gitignore
+.settings/
+.project
+.classpath
+.factorypath
+HELP.md
+pipeline-*.json
+pipeline-*.log
+pipeline-metrics.txt
+run*.txt
+test-output.json

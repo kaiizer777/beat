@@ -90,26 +90,54 @@ This stack is designed to run 100% on free tiers without requiring a credit card
 
 ## 💻 Local Development Setup
 
+### Option A: Running with Docker Compose (Recommended)
+
 1. **Clone Repository**:
    ```bash
    git clone https://github.com/kaiizer777/beat.git
    cd beat
    ```
 
-2. **Backend**:
+2. **Configure Environment**:
+   ```bash
+   cp .env.docker.example .env
+   # Edit .env with your Neon DB connection string and API keys
+   ```
+
+3. **Launch the Full Stack**:
+   ```bash
+   docker compose up --build
+   ```
+
+   - **Frontend**: Accessible at `http://localhost:3000`
+   - **Backend API**: Accessible at `http://localhost:8080`
+   - **Healthcheck Endpoint**: `http://localhost:8080/actuator/health`
+
+4. *(Optional)* **Offline Dev with Local PostgreSQL**:
+   If you want to run completely offline without Neon DB:
+   ```bash
+   docker compose --profile local-db up --build
+   ```
+
+---
+
+### Option B: Running Bare-Metal
+
+1. **Backend**:
    ```bash
    cd backend
    cp .env.example .env  # Configure your credentials
    ./mvnw spring-boot:run
    ```
 
-3. **Frontend**:
+2. **Frontend**:
    ```bash
    cd frontend
    cp .env.example .env.local  # Set NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
    npm install
    npm run dev
    ```
+
 
 ---
 
