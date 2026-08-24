@@ -23,7 +23,11 @@ export default function LoginPage() {
         callbackUrl: "/",
       });
       if (res?.error) {
-        setError(res.error);
+        if (res.error === "Configuration") {
+          setError("Unable to connect to authentication service. Please retry in a few seconds.");
+        } else {
+          setError(res.error);
+        }
       } else {
         setSubmitted(true);
       }
