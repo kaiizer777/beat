@@ -175,7 +175,6 @@ public class DigestPipelineService {
             factCheckMetrics.put("input", originalCount);
             factCheckMetrics.put("accepted", acceptedCount);
             factCheckMetrics.put("rejected", rejectedCount);
-            factCheckMetrics.put("rejectionReasons", rejectionReasonCounts);
 
             Map<String, Object> allMetrics = new LinkedHashMap<>();
             allMetrics.put("targetCount", targetCount);
