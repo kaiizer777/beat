@@ -271,9 +271,9 @@ export default function ChannelDetailPage() {
             <button
               onClick={loadChannelData}
               disabled={isLoadingRuns}
-              className="flex items-center space-x-2 rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-xs font-medium text-slate-400 hover:border-slate-700 hover:text-white transition disabled:opacity-50"
+              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-3.5 py-2 text-xs font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isLoadingRuns ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${isLoadingRuns ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </button>
           </div>
@@ -321,12 +321,12 @@ export default function ChannelDetailPage() {
                   <button
                     onClick={handleRunNow}
                     disabled={isTriggering || !!pendingRunId || cooldown > 0}
-                    className="w-full sm:w-auto flex items-center justify-center space-x-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto flex items-center justify-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-6 py-3 text-sm font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
                   >
                     {isTriggering || pendingRunId ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                      <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
                     ) : (
-                      <Play className="h-5 w-5 fill-white/20 text-white" />
+                      <Play className="h-4 w-4 text-cyan-400 fill-cyan-400/20" />
                     )}
                     <span>
                       {pendingRunId

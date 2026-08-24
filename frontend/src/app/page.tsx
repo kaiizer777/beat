@@ -388,9 +388,9 @@ export default function Home() {
                     setSearchQuery('');
                     setFilterActiveOnly(false);
                   }}
-                  className="mt-6 flex items-center space-x-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-blue-500 transition"
+                  className="mt-6 flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-5 py-2.5 text-sm font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 text-cyan-400" />
                   <span>Clear Filters</span>
                 </button>
               </div>

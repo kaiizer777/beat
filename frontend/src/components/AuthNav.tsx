@@ -22,9 +22,9 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
     return (
       <Link
         href="/login"
-        className="text-xs bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl transition shadow-md shadow-cyan-500/10 flex items-center space-x-1.5"
+        className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium px-3.5 py-2 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
       >
-        <User className="h-3.5 w-3.5" />
+        <User className="h-3.5 w-3.5 text-cyan-400" />
         <span>Sign in</span>
       </Link>
     );

@@ -169,7 +169,7 @@ export function ChannelCard({
             onClick={() => onToggleActive(channel, !channel.isActive)}
             title={channel.isActive ? 'Pause Schedule' : 'Activate Schedule'}
             className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border border-slate-700 border-b-[3px] border-b-slate-950 transition-colors duration-200 ease-in-out focus:outline-none ${
-              channel.isActive ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-slate-800'
+              channel.isActive ? 'bg-cyan-500' : 'bg-slate-800'
             }`}
           >
             <span
@@ -249,12 +249,12 @@ export function ChannelCard({
               onClick={() => onRunNow(channel)}
               disabled={isRunPending}
               title="Trigger research pipeline now"
-              className="inline-flex items-center space-x-1.5 rounded-lg border border-cyan-600 bg-cyan-500/20 border-b-[4px] border-b-cyan-800 px-2.5 py-1.5 text-xs font-bold text-cyan-300 shadow-[0_4px_10px_rgba(6,182,212,0.2)] disabled:opacity-50 disabled:border-b disabled:translate-y-[3px]"
+              className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700/90 border-b-[3px] border-b-slate-950 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-white shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50 disabled:border-b disabled:translate-y-[3px]"
             >
               {isRunPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-300" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
               ) : (
-                <Zap className="h-3.5 w-3.5" />
+                <Zap className="h-3.5 w-3.5 text-cyan-400" />
               )}
               <span className="hidden sm:inline">{isRunPending ? 'Running…' : 'Run Now'}</span>
             </button>

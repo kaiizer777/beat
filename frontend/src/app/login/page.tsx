@@ -50,8 +50,8 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md rounded-3xl border border-slate-800/80 bg-slate-900/80 p-8 shadow-2xl backdrop-blur-xl animate-fade-in">
         {/* Logo Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-xl shadow-cyan-500/25 mb-4">
-            <Radio className="h-7 w-7 text-white animate-pulse" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-cyan-400 border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] mb-4">
+            <Radio className="h-7 w-7 text-cyan-400 animate-pulse" />
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
             Welcome to BEAT
@@ -104,17 +104,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center space-x-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3 px-4 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-blue-500 transition disabled:opacity-50"
+              className="w-full flex items-center justify-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 py-3 px-4 text-sm font-semibold text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
                   <span>Sending magic link...</span>
                 </>
               ) : (
                 <>
                   <span>Send Magic Link</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 text-cyan-400" />
                 </>
               )}
             </button>

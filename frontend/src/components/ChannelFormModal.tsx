@@ -138,7 +138,7 @@ export function ChannelFormModal({
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
           <div className="flex items-center space-x-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30 shadow-md">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-800 text-cyan-400 border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
@@ -245,8 +245,8 @@ export function ChannelFormModal({
                   onClick={() => setArticleCount(count)}
                   className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                     articleCount === count
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
-                      : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-slate-800 text-cyan-300 border border-slate-700 border-b-[2px] border-b-slate-950 shadow-sm'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
                   }`}
                 >
                   {count}
@@ -336,7 +336,7 @@ export function ChannelFormModal({
               type="button"
               onClick={() => setIsActive(!isActive)}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                isActive ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-slate-800'
+                isActive ? 'bg-cyan-500' : 'bg-slate-800'
               }`}
             >
               <span
@@ -361,16 +361,16 @@ export function ChannelFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center space-x-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-blue-500 transition disabled:opacity-50"
+              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-6 py-2.5 text-xs font-bold text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
                   <span>Saving Channel...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="h-3.5 w-3.5" />
+                  <Zap className="h-3.5 w-3.5 text-cyan-400" />
                   <span>{editingChannel ? 'Update Channel' : 'Create Channel'}</span>
                 </>
               )}
