@@ -246,32 +246,44 @@ public class ResearchPipelineService {
         return new ResearchResult(finalPool, metrics);
     }
 
+    private static final java.util.Set<String> NOISE_WORDS = java.util.Set.of(
+            "past", "day", "days", "hour", "hours", "week", "weeks", "month", "months", "year", "years",
+            "today", "yesterday", "latest", "top", "recent", "news", "daily", "breaking", "new", "update",
+            "updates", "best", "24h", "48h", "7d", "the", "in", "for", "on", "of", "and", "to", "a", "an",
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "24", "48"
+    );
+
+    private String cleanTopic(String topic) {
+        if (topic == null || topic.isBlank()) return "";
+        String[] tokens = topic.trim().toLowerCase().split("\\s+");
+        List<String> meaningful = new ArrayList<>();
+        for (String token : tokens) {
+            String cleaned = token.replaceAll("[^a-zA-Z0-9-]", "");
+            if (!cleaned.isBlank() && !NOISE_WORDS.contains(cleaned)) {
+                meaningful.add(token);
+            }
+        }
+        return meaningful.isEmpty() ? topic.trim() : String.join(" ", meaningful);
+    }
+
     /**
      * Generate a broader set of sub-queries for the fallback pass. The aim is to
-     * surface articles that the more specific 5 sub-queries may have missed —
-     * typically because the topic is multi-word and the truncated terms match
-     * a different, broader news corpus. We never include the same query twice.
-     *
-     * Examples:
-     *   "coding related ai"  -> ["coding related ai", "coding related", "coding"]
-     *   "AI"                 -> ["AI"]                          (no fallback possible)
-     *   "machine learning"   -> ["machine learning", "machine", "learning"]
+     * surface articles that the more specific 5 sub-queries may have missed.
      */
     private List<String> generateBroaderQueries(String topic) {
-        String trimmed = topic.trim();
+        String cleaned = cleanTopic(topic);
+        String baseTopic = !cleaned.isBlank() ? cleaned : topic.trim();
         LinkedHashSet<String> out = new LinkedHashSet<>();
-        out.add(trimmed);
-        String[] words = trimmed.split("\\s+");
+        out.add(baseTopic);
+        String[] words = baseTopic.split("\\s+");
         if (words.length >= 3) {
-            // Take the first two words
             String firstTwo = words[0] + " " + words[1];
-            if (!firstTwo.equals(trimmed)) {
+            if (!firstTwo.equalsIgnoreCase(baseTopic)) {
                 out.add(firstTwo);
             }
         }
         if (words.length >= 2) {
-            // First single word, if it's long enough to be a meaningful topic
-            if (words[0].length() >= 3) {
+            if (words[0].length() >= 2 && !NOISE_WORDS.contains(words[0].toLowerCase())) {
                 out.add(words[0]);
             }
         }
@@ -280,10 +292,7 @@ public class ResearchPipelineService {
 
     /**
      * Run a single pass of the search pipeline (search + freshness + sort + dedup +
-     * fetch + final dedup) for a given list of sub-queries. Used by both the main
-     * pass and the broader-search fallback. Metrics are written under
-     * {@code metrics[passName + "_" + key]} so the two passes' numbers stay
-     * separable in the final PIPELINE_METRICS log.
+     * fetch + final dedup) for a given list of sub-queries.
      */
     private List<RawArticle> runSearchPass(List<String> subQueries, int maxAgeHours,
                                            Map<String, Object> metrics, String passName) {
@@ -381,22 +390,23 @@ public class ResearchPipelineService {
 
     private List<String> generateSubQueries(String topic) {
         String trimmed = topic.trim();
-        List<String> queries = new ArrayList<>();
-        // Base topic unchanged so the search engine applies its default relevance ranking.
+        String cleaned = cleanTopic(trimmed);
+        String baseTopic = (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) ? cleaned : trimmed;
+
+        LinkedHashSet<String> queries = new LinkedHashSet<>();
+        // Include base topic & cleaned topic
         queries.add(trimmed);
-        // Generic "news" qualifier — broadens coverage without forcing a strict
-        // temporal phrase that breaks the upstream search API.
-        queries.add(trimmed + " news");
-        // Current-year anchor biases results toward recent content; the Java
-        // Freshness Filter enforces the exact temporal window downstream.
+        if (!cleaned.isBlank()) {
+            queries.add(cleaned);
+        }
+        // Generic "news" qualifier
+        queries.add(baseTopic + " news");
+        // Current-year anchor
         String currentYear = String.valueOf(Year.now().getValue());
-        queries.add(trimmed + " " + currentYear);
-        // Semantic qualifiers that pull in different article classes (analytical
-        // pieces, formal reports) the bare "news" query often misses. Critical
-        // for reaching larger targetCounts (e.g. 10-15) where the default 3
-        // sub-queries don't produce enough unique raw candidates.
-        queries.add(trimmed + " analysis");
-        queries.add(trimmed + " report");
-        return queries;
+        queries.add(baseTopic + " " + currentYear);
+        // Semantic qualifiers
+        queries.add(baseTopic + " analysis");
+        queries.add(baseTopic + " report");
+        return new ArrayList<>(queries);
     }
 }

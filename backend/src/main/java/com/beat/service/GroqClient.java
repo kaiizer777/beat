@@ -21,17 +21,20 @@ public class GroqClient {
 
     private static final Logger log = LoggerFactory.getLogger(GroqClient.class);
     private static final String GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-    private static final String DEFAULT_MODEL = "llama-3.3-70b-versatile";
+    private static final String DEFAULT_MODEL = "openai/gpt-oss-20b";
 
     private final String apiKey;
+    private final String model;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final GroqUsageTracker usageTracker;
 
     public GroqClient(@Value("${groq.api-key:${GROQ_API_KEY:}}") String apiKey,
+                      @Value("${groq.model:${GROQ_MODEL:openai/gpt-oss-20b}}") String model,
                       ObjectMapper objectMapper,
                       GroqUsageTracker usageTracker) {
         this.apiKey = apiKey != null ? apiKey.trim() : "";
+        this.model = (model != null && !model.isBlank()) ? model.trim() : DEFAULT_MODEL;
         this.objectMapper = objectMapper;
         this.usageTracker = usageTracker;
         this.httpClient = HttpClient.newBuilder()
@@ -45,7 +48,7 @@ public class GroqClient {
         }
 
         ObjectNode requestBody = objectMapper.createObjectNode();
-        requestBody.put("model", DEFAULT_MODEL);
+        requestBody.put("model", this.model);
 
         ArrayNode messages = requestBody.putArray("messages");
 

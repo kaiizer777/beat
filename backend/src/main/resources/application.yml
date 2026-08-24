@@ -32,6 +32,7 @@ tinyfish:
 
 groq:
   api-key: ${GROQ_API_KEY}
+  model: ${GROQ_MODEL:openai/gpt-oss-20b}
 
 resend:
   api-key: ${RESEND_API_KEY}
