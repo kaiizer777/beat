@@ -34,7 +34,7 @@ public class BrevoEmailService implements EmailProvider {
 
     @Autowired
     public BrevoEmailService(@Value("${brevo.api-key:}") String apiKey,
-                             @Value("${brevo.from-email:Beat Digest <noreply@brevo.com>}") String fromEmail,
+                             @Value("${brevo.from-email:Beat Digest <kanekigaminz@gmail.com>}") String fromEmail,
                              ObjectMapper objectMapper) {
         this(apiKey, fromEmail, objectMapper, HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -46,7 +46,7 @@ public class BrevoEmailService implements EmailProvider {
                              ObjectMapper objectMapper,
                              HttpClient httpClient) {
         this.apiKey = apiKey != null ? apiKey.trim() : "";
-        this.fromEmail = fromEmail != null ? fromEmail.trim() : "Beat Digest <noreply@brevo.com>";
+        this.fromEmail = fromEmail != null ? fromEmail.trim() : "Beat Digest <kanekigaminz@gmail.com>";
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
     }

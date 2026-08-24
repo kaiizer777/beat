@@ -40,7 +40,7 @@ resend:
 
 brevo:
   api-key: ${BREVO_API_KEY:}
-  from-email: ${BREVO_FROM_EMAIL:Beat Digest <noreply@brevo.com>}
+  from-email: ${BREVO_FROM_EMAIL:Beat Digest <kanekigaminz@gmail.com>}
 
 email:
   resend-target: ${EMAIL_RESEND_TARGET:kaizerxdev@gmail.com}

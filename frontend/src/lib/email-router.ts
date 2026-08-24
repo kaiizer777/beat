@@ -25,13 +25,13 @@ interface SendVerificationRequestParams {
 
 function parseSender(rawSender: string): { name: string; email: string } {
   if (!rawSender || !rawSender.trim()) {
-    return { name: "Beat Digest", email: "kaizerxdev@gmail.com" };
+    return { name: "Beat Digest", email: "kanekigaminz@gmail.com" };
   }
   const match = rawSender.trim().match(/^(.*?)\s*<(.+?)>$/);
   if (match) {
     return {
       name: match[1].trim() || "Beat Digest",
-      email: match[2].trim() || "kaizerxdev@gmail.com",
+      email: match[2].trim() || "kanekigaminz@gmail.com",
     };
   }
   return {
@@ -138,7 +138,7 @@ export async function sendVerificationRequest(params: SendVerificationRequestPar
     }
   } else {
     const brevoApiKey = process.env.BREVO_API_KEY;
-    const rawFrom = process.env.BREVO_FROM_EMAIL || "Beat Digest <kaizerxdev@gmail.com>";
+    const rawFrom = process.env.BREVO_FROM_EMAIL || "Beat Digest <kanekigaminz@gmail.com>";
 
     if (!brevoApiKey) {
       if (process.env.NODE_ENV === "production") {
