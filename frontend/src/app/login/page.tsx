@@ -40,31 +40,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background Gradient Glows */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-cyan-600/15 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full bg-blue-600/10 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Atmospheric subtle studio grid */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-studio-grid opacity-80" />
 
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-slate-800/80 bg-slate-900/80 p-8 shadow-2xl backdrop-blur-xl animate-fade-in">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d131f] p-8 shadow-2xl backdrop-blur-xl animate-fade-in">
         {/* Logo Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-cyan-400 border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] mb-4">
-            <Radio className="h-7 w-7 text-cyan-400 animate-pulse" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-sky-400 border border-slate-700/80 shadow-sm mb-4">
+            <Radio className="h-6 w-6 text-sky-400 animate-pulse" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Welcome to BEAT
           </h1>
-          <p className="mt-2 text-sm text-slate-400 max-w-xs">
+          <p className="mt-2 text-xs sm:text-sm text-slate-400 max-w-xs">
             Sign in with your email address to access your personalized news digests.
           </p>
         </div>
 
         {submitted ? (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center animate-slide-up">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mb-3">
-              <CheckCircle2 className="h-6 w-6" />
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center animate-slide-up">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mb-3">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
             <h3 className="text-base font-bold text-emerald-300">Magic Link Sent!</h3>
             <p className="mt-2 text-xs text-slate-300 leading-relaxed">
@@ -89,7 +86,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950/60 pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 shadow-inner focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/20 transition"
                 />
               </div>
             </div>
@@ -104,17 +101,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 py-3 px-4 text-sm font-semibold text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50"
+              className="w-full flex items-center justify-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 py-2.5 px-4 text-sm font-semibold text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                  <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
                   <span>Sending magic link...</span>
                 </>
               ) : (
                 <>
                   <span>Send Magic Link</span>
-                  <ArrowRight className="h-4 w-4 text-cyan-400" />
+                  <ArrowRight className="h-4 w-4 text-sky-400" />
                 </>
               )}
             </button>

@@ -22,9 +22,9 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
     return (
       <Link
         href="/login"
-        className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium px-3.5 py-2 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
+        className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium px-3.5 py-1.5 rounded-xl border border-slate-700/80 shadow-sm transition"
       >
-        <User className="h-3.5 w-3.5 text-cyan-400" />
+        <User className="h-3.5 w-3.5 text-sky-400" />
         <span>Sign in</span>
       </Link>
     );
@@ -43,10 +43,10 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
       <div className="flex items-center space-x-2">
         <button
           onClick={handleOpenModal}
-          className="flex items-center space-x-2 text-xs bg-slate-800 text-slate-200 font-medium px-3 py-1.5 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
+          className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/80 text-slate-200 font-medium px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-sm transition"
           title="Account Settings"
         >
-          <div className="h-5 w-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-[10px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+          <div className="h-5 w-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[10px]">
             {session.user?.email ? session.user.email.charAt(0).toUpperCase() : 'U'}
           </div>
           <span className="hidden sm:inline max-w-[140px] truncate">{session.user?.email}</span>
@@ -55,7 +55,7 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
 
         <button
           onClick={() => signOut()}
-          className="text-xs bg-slate-800 text-slate-400 p-2 rounded-xl border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
+          className="text-xs bg-slate-800 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 p-2 rounded-xl border border-slate-700/80 shadow-sm transition"
           title="Sign out"
         >
           <LogOut className="h-3.5 w-3.5" />

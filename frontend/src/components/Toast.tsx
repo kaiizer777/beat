@@ -36,22 +36,22 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   const getBg = () => {
     switch (toast.type) {
       case 'success':
-        return 'border-emerald-500/30 bg-slate-900/95 text-emerald-300 shadow-emerald-500/10';
+        return 'border-emerald-500/30 bg-[#0d131f]/95 text-emerald-300 shadow-lg';
       case 'error':
-        return 'border-rose-500/30 bg-slate-900/95 text-rose-300 shadow-rose-500/10';
+        return 'border-rose-500/30 bg-[#0d131f]/95 text-rose-300 shadow-lg';
       default:
-        return 'border-cyan-500/30 bg-slate-900/95 text-cyan-300 shadow-cyan-500/10';
+        return 'border-sky-500/30 bg-[#0d131f]/95 text-sky-300 shadow-lg';
     }
   };
 
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />;
+        return <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />;
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-rose-400 flex-shrink-0" />;
+        return <AlertCircle className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />;
       default:
-        return <Info className="h-5 w-5 text-cyan-400 flex-shrink-0" />;
+        return <Info className="h-4 w-4 text-sky-400 flex-shrink-0 mt-0.5" />;
     }
   };
 

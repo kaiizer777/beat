@@ -127,40 +127,30 @@ export function ChannelCard({
     label: 'No runs yet',
     badgeClass: 'bg-slate-800/50 border-slate-700/50 border-b-[2px] border-b-slate-800 text-slate-400',
     Icon: Calendar,
-  };
-
-  return (
+  };  return (
     <div
-      className={`relative flex flex-col justify-between rounded-2xl p-5 ${
+      className={`group relative flex flex-col justify-between rounded-2xl p-5 border transition-all duration-200 shadow-sm backdrop-blur-md ${
         channel.isActive
-          ? 'bg-gradient-to-b from-slate-800 via-slate-900 to-slate-900 border-x border-t border-slate-700 border-b-[8px] border-b-slate-950 shadow-[0_10px_30px_rgba(0,0,0,0.8)]'
-          : 'bg-slate-900 border-x border-t border-slate-800 border-b-[8px] border-b-slate-950 opacity-80 shadow-[0_4px_15px_rgba(0,0,0,0.5)]'
+          ? 'border-slate-800/90 bg-slate-900/50 hover:bg-slate-900/80 hover:border-slate-700/80'
+          : 'border-slate-800/60 bg-slate-900/30 opacity-75 hover:opacity-100 hover:border-slate-700/70'
       }`}
     >
-      {/* Active Glow Accent Line */}
-      {channel.isActive && (
-        <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
-      )}
-
       <div>
         {/* Header: Title + Pulse + Active Toggle */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center space-x-2.5 min-w-0">
             <Link
               href={`/channels/${channel.id}`}
-              className="text-base font-bold text-slate-100 truncate tracking-tight"
+              className="text-base font-semibold text-slate-100 hover:text-sky-300 truncate tracking-tight transition"
             >
               {channel.name}
             </Link>
-            <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+            <span className="relative flex h-2 w-2 flex-shrink-0">
               <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  channel.isActive ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-600'
+                className={`h-2 w-2 rounded-full ${
+                  channel.isActive ? 'bg-emerald-400' : 'bg-slate-600'
                 }`}
               />
-              {channel.isActive && (
-                <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-50" />
-              )}
             </span>
           </div>
 
@@ -168,12 +158,12 @@ export function ChannelCard({
           <button
             onClick={() => onToggleActive(channel, !channel.isActive)}
             title={channel.isActive ? 'Pause Schedule' : 'Activate Schedule'}
-            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border border-slate-700 border-b-[3px] border-b-slate-950 transition-colors duration-200 ease-in-out focus:outline-none ${
-              channel.isActive ? 'bg-cyan-500' : 'bg-slate-800'
+            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border border-slate-700 transition-colors duration-200 ease-in-out focus:outline-none ${
+              channel.isActive ? 'bg-sky-500' : 'bg-slate-800'
             }`}
           >
             <span
-              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition duration-200 ease-in-out ${
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
                 channel.isActive ? 'translate-x-4' : 'translate-x-0'
               }`}
             />
@@ -181,48 +171,48 @@ export function ChannelCard({
         </div>
 
         {/* Topic Query Badge */}
-        <div className="mt-3 rounded-xl border border-slate-700 bg-slate-900 border-b-[4px] border-b-slate-950 p-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
-          <p className="text-xs text-slate-300 font-mono line-clamp-2 leading-relaxed">
+        <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-2.5">
+          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
             {channel.topicQuery}
           </p>
         </div>
 
         {/* Schedule & Article Info Grid */}
-        <div className="mt-4 grid grid-cols-2 gap-2.5">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           {/* Next Scheduled Run */}
-          <div className="col-span-2 rounded-xl border border-cyan-700/50 bg-cyan-900/20 border-b-[4px] border-b-cyan-950/50 p-2.5 flex items-center space-x-2.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
-            <Clock className="h-4 w-4 text-cyan-400 flex-shrink-0" />
+          <div className="col-span-2 rounded-xl border border-slate-800/70 bg-slate-800/30 p-2.5 flex items-center space-x-2.5">
+            <Clock className="h-3.5 w-3.5 text-sky-400 flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span className="block text-[10px] font-medium uppercase tracking-wider text-slate-400">
                 Next Run
               </span>
-              <span className="block text-xs font-bold text-cyan-300 truncate drop-shadow-md">
+              <span className="block text-xs font-semibold text-sky-300 truncate">
                 {nextRun}
               </span>
             </div>
           </div>
 
           {/* Articles Target */}
-          <div className="rounded-xl border border-slate-700 bg-slate-900 border-b-[4px] border-b-slate-950 p-2.5 flex items-center space-x-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
-            <Hash className="h-3.5 w-3.5 text-indigo-400 flex-shrink-0" />
+          <div className="rounded-xl border border-slate-800/70 bg-slate-800/30 p-2.5 flex items-center space-x-2">
+            <Hash className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
             <div>
-              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="block text-[9px] font-medium uppercase tracking-wider text-slate-400">
                 Articles
               </span>
-              <span className="block text-xs font-bold text-slate-200 drop-shadow-md">
+              <span className="block text-xs font-semibold text-slate-200">
                 {channel.articleCount} <span className="text-[10px] text-slate-500 font-normal">stories</span>
               </span>
             </div>
           </div>
 
           {/* Last Run Date */}
-          <div className="rounded-xl border border-slate-700 bg-slate-900 border-b-[4px] border-b-slate-950 p-2.5 flex items-center space-x-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]">
-            <Calendar className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
+          <div className="rounded-xl border border-slate-800/70 bg-slate-800/30 p-2.5 flex items-center space-x-2">
+            <Calendar className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
             <div className="min-w-0">
-              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="block text-[9px] font-medium uppercase tracking-wider text-slate-400">
                 Last Run
               </span>
-              <span className="block text-xs font-medium text-slate-300 truncate drop-shadow-md">
+              <span className="block text-xs font-medium text-slate-300 truncate">
                 {lastRun ?? 'Never'}
               </span>
             </div>
@@ -231,10 +221,10 @@ export function ChannelCard({
       </div>
 
       {/* Action Footer */}
-      <div className="mt-5 pt-4 border-t-2 border-slate-800/80 flex items-center justify-between gap-2">
+      <div className="mt-5 pt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
         {/* Status Badge */}
         <div
-          className={`inline-flex items-center space-x-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shadow-[0_2px_5px_rgba(0,0,0,0.3)] ${statusConfig.badgeClass}`}
+          className={`inline-flex items-center space-x-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm ${statusConfig.badgeClass}`}
         >
           <statusConfig.Icon
             className={`h-3 w-3 ${status === 'PENDING' ? 'animate-spin' : ''}`}
@@ -249,12 +239,12 @@ export function ChannelCard({
               onClick={() => onRunNow(channel)}
               disabled={isRunPending}
               title="Trigger research pipeline now"
-              className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700/90 border-b-[3px] border-b-slate-950 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-white shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50 disabled:border-b disabled:translate-y-[3px]"
+              className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-700/80 bg-slate-800 hover:bg-slate-700/90 px-2.5 py-1.5 text-xs font-semibold text-slate-200 hover:text-white shadow-sm transition disabled:opacity-50"
             >
               {isRunPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
               ) : (
-                <Zap className="h-3.5 w-3.5 text-cyan-400" />
+                <Zap className="h-3.5 w-3.5 text-sky-400" />
               )}
               <span className="hidden sm:inline">{isRunPending ? 'Running…' : 'Run Now'}</span>
             </button>
@@ -262,7 +252,7 @@ export function ChannelCard({
 
           <Link
             href={`/channels/${channel.id}`}
-            className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-600 bg-slate-800 border-b-[4px] border-b-slate-950 px-2.5 py-1.5 text-xs font-medium text-slate-300 shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
+            className="inline-flex items-center space-x-1.5 rounded-lg border border-slate-700/80 bg-slate-800 hover:bg-slate-700/90 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white shadow-sm transition"
             title="Read Digest History"
           >
             <BookOpen className="h-3.5 w-3.5 text-indigo-400" />
@@ -272,7 +262,7 @@ export function ChannelCard({
           <button
             onClick={() => onEdit(channel)}
             title="Edit Channel Settings"
-            className="rounded-lg border border-slate-600 bg-slate-800 border-b-[4px] border-b-slate-950 p-1.5 text-slate-300 shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
+            className="rounded-lg border border-slate-700/80 bg-slate-800 hover:bg-slate-700/90 p-1.5 text-slate-300 hover:text-white shadow-sm transition"
           >
             <Edit3 className="h-3.5 w-3.5" />
           </button>
@@ -280,7 +270,7 @@ export function ChannelCard({
           <button
             onClick={() => onDelete(channel)}
             title="Delete Channel"
-            className="rounded-lg border border-rose-700 bg-rose-500/20 border-b-[4px] border-b-rose-950 p-1.5 text-rose-300 shadow-[0_4px_10px_rgba(225,29,72,0.2)]"
+            className="rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 p-1.5 text-rose-400 shadow-sm transition"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

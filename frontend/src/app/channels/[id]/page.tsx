@@ -246,12 +246,9 @@ export default function ChannelDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white">
-      {/* Background Gradient Orbs */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-cyan-600/10 blur-3xl" />
-        <div className="absolute top-1/3 -right-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-[#090d16] text-slate-100 antialiased font-sans selection:bg-sky-500 selection:text-white">
+      {/* ── Atmospheric subtle studio grid ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-studio-grid opacity-80" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Header */}
@@ -262,7 +259,7 @@ export default function ChannelDetailPage() {
           <div className="mb-6 flex items-center justify-between">
             <Link
               href="/"
-              className="inline-flex items-center space-x-2 text-sm font-medium text-slate-400 hover:text-cyan-300 transition"
+              className="inline-flex items-center space-x-2 text-sm font-medium text-slate-400 hover:text-sky-300 transition"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Back to All Channels</span>
@@ -271,46 +268,46 @@ export default function ChannelDetailPage() {
             <button
               onClick={loadChannelData}
               disabled={isLoadingRuns}
-              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-3.5 py-2 text-xs font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50"
+              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-3.5 py-1.5 text-xs font-medium text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${isLoadingRuns ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-sky-400 ${isLoadingRuns ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </button>
           </div>
 
           {/* Channel Header Banner */}
           {isLoadingChannel ? (
-            <div className="mb-8 h-32 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 animate-pulse" />
+            <div className="mb-8 h-36 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 animate-pulse" />
           ) : channel ? (
-            <div className="mb-8 rounded-3xl border border-slate-800/80 bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 p-6 sm:p-8 shadow-xl">
+            <div className="mb-8 rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6 sm:p-8 shadow-sm backdrop-blur-md">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+                <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                       {channel.name}
                     </h1>
                     <span
-                      className={`inline-block h-3 w-3 rounded-full ${
-                        channel.isActive ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-600'
+                      className={`inline-block h-2.5 w-2.5 rounded-full ${
+                        channel.isActive ? 'bg-emerald-400 ring-4 ring-emerald-500/20' : 'bg-slate-600'
                       }`}
                     />
                   </div>
 
-                  <p className="mt-3 max-w-3xl text-xs sm:text-sm text-slate-300 bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/80 font-mono leading-relaxed">
+                  <p className="max-w-3xl text-sm text-slate-300 leading-relaxed">
                     {channel.topicQuery}
                   </p>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                    <div className="flex items-center space-x-1.5">
-                      <Clock className="h-4 w-4 text-cyan-400" />
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs text-slate-400">
+                    <div className="flex items-center space-x-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 px-2.5 py-1 text-slate-300">
+                      <Clock className="h-3.5 w-3.5 text-sky-400" />
                       <span>{channel.cronTime} daily</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                      <Globe className="h-4 w-4 text-blue-400" />
+                    <div className="flex items-center space-x-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 px-2.5 py-1 text-slate-300">
+                      <Globe className="h-3.5 w-3.5 text-slate-400" />
                       <span className="font-mono">{channel.timezone}</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                      <Hash className="h-4 w-4 text-indigo-400" />
+                    <div className="flex items-center space-x-1.5 rounded-lg bg-slate-800/60 border border-slate-700/60 px-2.5 py-1 text-slate-300">
+                      <Hash className="h-3.5 w-3.5 text-slate-400" />
                       <span>{channel.articleCount} target stories</span>
                     </div>
                   </div>
@@ -321,12 +318,12 @@ export default function ChannelDetailPage() {
                   <button
                     onClick={handleRunNow}
                     disabled={isTriggering || !!pendingRunId || cooldown > 0}
-                    className="w-full sm:w-auto flex items-center justify-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-6 py-3 text-sm font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+                    className="w-full sm:w-auto flex items-center justify-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-5 sm:px-6 py-2.5 sm:py-3 text-sm font-medium text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
                   >
                     {isTriggering || pendingRunId ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                      <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
                     ) : (
-                      <Play className="h-4 w-4 text-cyan-400 fill-cyan-400/20" />
+                      <Play className="h-4 w-4 text-sky-400 fill-sky-400/20" />
                     )}
                     <span>
                       {pendingRunId
@@ -347,7 +344,7 @@ export default function ChannelDetailPage() {
               onClick={() => setMobileTab('history')}
               className={`flex-1 flex items-center justify-center space-x-2 rounded-lg py-2 text-xs font-semibold transition ${
                 mobileTab === 'history'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  ? 'bg-slate-800 text-sky-300 border border-slate-700 shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -359,7 +356,7 @@ export default function ChannelDetailPage() {
               onClick={() => setMobileTab('reader')}
               className={`flex-1 flex items-center justify-center space-x-2 rounded-lg py-2 text-xs font-semibold transition ${
                 mobileTab === 'reader'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  ? 'bg-slate-800 text-sky-300 border border-slate-700 shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -376,13 +373,13 @@ export default function ChannelDetailPage() {
                 mobileTab === 'history' ? 'block' : 'hidden lg:block'
               }`}
             >
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md shadow-sm">
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-4">
-                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-cyan-400" />
+                  <h2 className="text-sm font-semibold text-white flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-sky-400" />
                     <span>Digest History</span>
                   </h2>
-                  <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-400 font-medium">
+                  <span className="rounded-full bg-slate-800/80 border border-slate-700/60 px-2.5 py-0.5 text-xs text-slate-400 font-medium">
                     {runs.length} runs
                   </span>
                 </div>
@@ -398,7 +395,7 @@ export default function ChannelDetailPage() {
                     No digest runs recorded yet. Click "Trigger Run Now" to generate your first digest!
                   </div>
                 ) : (
-                  <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                     {runs.map((run) => {
                       const isSelected = selectedRun?.id === run.id;
                       return (
@@ -408,10 +405,10 @@ export default function ChannelDetailPage() {
                             setSelectedRun(run);
                             setMobileTab('reader');
                           }}
-                          className={`w-full text-left rounded-xl p-4 transition duration-150 border ${
+                          className={`w-full text-left rounded-xl p-3.5 transition duration-150 border ${
                             isSelected
-                              ? 'border-cyan-500/60 bg-cyan-500/10 shadow-md shadow-cyan-500/5'
-                              : 'border-slate-800/70 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-900/90'
+                              ? 'border-sky-500/50 bg-slate-800/90 text-white shadow-sm ring-1 ring-sky-500/20'
+                              : 'border-slate-800/60 bg-slate-900/40 hover:border-slate-700/80 hover:bg-slate-800/50 text-slate-300'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -445,12 +442,12 @@ export default function ChannelDetailPage() {
               }`}
             >
               {selectedRun ? (
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 backdrop-blur-sm">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 sm:p-8 backdrop-blur-md shadow-sm">
                   {/* Selected Run Top Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-6 mb-6 gap-4">
                     <div>
                       <div className="flex items-center space-x-3">
-                        <h2 className="text-xl font-bold text-white">Digest Reader</h2>
+                        <h2 className="text-xl font-bold text-white tracking-tight">Digest Reader</h2>
                         {renderStatusBadge(selectedRun.status)}
                       </div>
                       <p className="mt-1 text-xs text-slate-400">
@@ -459,7 +456,7 @@ export default function ChannelDetailPage() {
                     </div>
 
                     {selectedRun.emailSent && (
-                      <div className="inline-flex items-center space-x-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-400">
+                      <div className="inline-flex items-center space-x-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 shadow-sm">
                         <MailCheck className="h-4 w-4" />
                         <span>Delivered to Email Inbox</span>
                       </div>
@@ -476,15 +473,15 @@ export default function ChannelDetailPage() {
 
                       {/* 3 Step Execution Progress Bar */}
                       <div className="mt-6 grid grid-cols-3 gap-2 w-full max-w-md text-left">
-                        <div className="rounded-lg bg-amber-900/40 p-2 border border-amber-500/20">
+                        <div className="rounded-lg bg-amber-900/40 p-2.5 border border-amber-500/20">
                           <span className="block text-[10px] font-bold text-amber-400 uppercase">Step 1</span>
                           <span className="block text-[11px] text-amber-200">TinyFish Fetch</span>
                         </div>
-                        <div className="rounded-lg bg-amber-900/40 p-2 border border-amber-500/20">
+                        <div className="rounded-lg bg-amber-900/40 p-2.5 border border-amber-500/20">
                           <span className="block text-[10px] font-bold text-amber-400 uppercase">Step 2</span>
                           <span className="block text-[11px] text-amber-200">Groq Synthesis</span>
                         </div>
-                        <div className="rounded-lg bg-amber-900/40 p-2 border border-amber-500/20">
+                        <div className="rounded-lg bg-amber-900/40 p-2.5 border border-amber-500/20">
                           <span className="block text-[10px] font-bold text-amber-400 uppercase">Step 3</span>
                           <span className="block text-[11px] text-amber-200">Email Delivery</span>
                         </div>
@@ -508,7 +505,7 @@ export default function ChannelDetailPage() {
                           </p>
                           <button
                             onClick={handleRunNow}
-                            className="mt-4 inline-flex items-center space-x-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition"
+                            className="mt-4 inline-flex items-center space-x-2 rounded-xl bg-rose-600 hover:bg-rose-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition"
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
                             <span>Retry Pipeline Run</span>
@@ -524,7 +521,7 @@ export default function ChannelDetailPage() {
                       {isLoadingItems ? (
                         <div className="space-y-4">
                           {[1, 2, 3].map((n) => (
-                            <div key={n} className="h-36 rounded-2xl bg-slate-800/40 animate-pulse" />
+                            <div key={n} className="h-36 rounded-xl bg-slate-800/40 animate-pulse" />
                           ))}
                         </div>
                       ) : newsItems.length === 0 ? (
@@ -532,16 +529,16 @@ export default function ChannelDetailPage() {
                           No news articles were returned for this digest run.
                         </div>
                       ) : (
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                           {newsItems.map((item) => (
                             <article
                               key={item.id}
-                              className="group relative rounded-2xl border border-slate-800/80 bg-slate-950/70 p-6 transition duration-200 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/5"
+                              className="group relative rounded-xl border border-slate-800/80 bg-slate-900/50 hover:bg-slate-900/80 hover:border-slate-700/80 p-5 sm:p-6 transition-all duration-200 shadow-sm"
                             >
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-start space-x-3 min-w-0">
                                   {/* Rank Badge */}
-                                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-xs font-extrabold text-cyan-400 border border-cyan-500/20">
+                                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-slate-800 border border-slate-700/70 text-xs font-bold text-sky-400">
                                     #{item.rankPosition}
                                   </span>
 
@@ -551,16 +548,16 @@ export default function ChannelDetailPage() {
                                       href={item.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-base font-bold text-slate-100 group-hover:text-cyan-300 transition inline-flex items-center space-x-1.5 leading-snug"
+                                      className="text-base font-semibold text-slate-100 group-hover:text-sky-300 transition inline-flex items-center space-x-1.5 leading-snug"
                                     >
                                       <span className="break-words">{item.title}</span>
-                                      <ExternalLink className="h-4 w-4 opacity-70 group-hover:opacity-100 flex-shrink-0 ml-1" />
+                                      <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 flex-shrink-0 ml-1" />
                                     </a>
 
                                     {/* Publisher & Published Date */}
-                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                                    <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs text-slate-400">
                                       {item.sourceName && (
-                                        <span className="rounded-md bg-slate-800/80 px-2 py-0.5 font-medium text-slate-300 border border-slate-700/50">
+                                        <span className="rounded-md bg-slate-800/80 px-2 py-0.5 font-medium text-slate-300 border border-slate-700/60">
                                           {item.sourceName}
                                         </span>
                                       )}
@@ -576,8 +573,8 @@ export default function ChannelDetailPage() {
 
                               {/* Synthesized 'Why It Matters' Blurb */}
                               {item.summaryBlurb && (
-                                <div className="mt-4 rounded-xl border border-cyan-500/15 bg-cyan-500/5 p-4 text-xs text-slate-300 leading-relaxed">
-                                  <div className="mb-1.5 flex items-center space-x-1.5 font-semibold text-cyan-400">
+                                <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.04] p-4 text-xs text-slate-300 leading-relaxed">
+                                  <div className="mb-1 flex items-center space-x-1.5 font-semibold text-sky-400">
                                     <Sparkles className="h-3.5 w-3.5" />
                                     <span>Why It Matters</span>
                                   </div>

@@ -189,20 +189,9 @@ export default function Home() {
   const activeChannels = channels.filter((c) => c.isActive).length;
 
   return (
-    <div className="min-h-screen bg-[#030712] text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white">
-      {/* ── Atmospheric background layer ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-dot-grid">
-        {/* Deep radial vignette so edges feel contained */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,182,212,0.07)_0%,transparent_70%)]" />
-        {/* Aurora orb 1 — cyan top-left */}
-        <div className="aurora-orb-1 absolute -top-32 -left-24 h-[520px] w-[520px] rounded-full bg-cyan-500/[0.10] blur-[100px]" />
-        {/* Aurora orb 2 — blue top-right */}
-        <div className="aurora-orb-2 absolute -top-20 right-0 h-[440px] w-[440px] rounded-full bg-blue-600/[0.09] blur-[90px]" />
-        {/* Aurora orb 3 — indigo mid-left */}
-        <div className="aurora-orb-3 absolute top-[45%] -left-32 h-[360px] w-[360px] rounded-full bg-indigo-600/[0.07] blur-[80px]" />
-        {/* Subtle bottom glow */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-64 w-[70%] rounded-full bg-cyan-900/[0.08] blur-[80px]" />
-      </div>
+    <div className="min-h-screen bg-[#090d16] text-slate-100 antialiased font-sans selection:bg-sky-500 selection:text-white">
+      {/* ── Atmospheric subtle studio grid ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-studio-grid opacity-80" />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Header */}
@@ -218,32 +207,32 @@ export default function Home() {
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           {/* Top Info Banner & Stats */}
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                <Radio className="h-6 w-6" />
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <Radio className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-400">Total Channels</p>
-                <p className="text-2xl font-bold text-white">{totalChannels}</p>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Total Channels</p>
+                <p className="text-2xl font-bold text-white tracking-tight">{totalChannels}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Zap className="h-6 w-6" />
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Zap className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-400">Active Schedules</p>
-                <p className="text-2xl font-bold text-white">{activeChannels}</p>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Active Schedules</p>
+                <p className="text-2xl font-bold text-white tracking-tight">{activeChannels}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                <Layers className="h-6 w-6" />
+            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-5 backdrop-blur-md shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <Layers className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-400">Execution Engine</p>
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">Execution Engine</p>
                 <p className="text-sm font-semibold text-slate-200">Spring TaskScheduler</p>
               </div>
             </div>
@@ -258,17 +247,17 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search channels by name or topic..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/90 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-inner focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                className="w-full rounded-xl border border-slate-800/80 bg-slate-900/70 pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/20 transition"
               />
             </div>
 
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setFilterActiveOnly(!filterActiveOnly)}
-                className={`flex items-center space-x-2 rounded-xl border px-4 py-2.5 text-xs font-medium transition ${
+                className={`flex items-center space-x-2 rounded-xl border px-3.5 py-2 text-xs font-medium transition shadow-sm ${
                   filterActiveOnly
-                    ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300'
-                    : 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-white'
+                    ? 'border-sky-500/50 bg-slate-800 text-sky-300'
+                    : 'border-slate-800/80 bg-slate-900/70 text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -279,7 +268,7 @@ export default function Home() {
                 onClick={loadData}
                 disabled={isLoading}
                 title="Refresh channel list"
-                className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 p-2.5 text-slate-400 hover:border-slate-700 hover:text-white transition disabled:opacity-50"
+                className="flex items-center justify-center rounded-xl border border-slate-800/80 bg-slate-900/70 p-2 text-slate-400 hover:border-slate-700/80 hover:text-white transition shadow-sm disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
@@ -294,11 +283,11 @@ export default function Home() {
                 <h3 className="text-base font-semibold">Backend Unreachable</h3>
                 <p className="mt-1 text-sm text-rose-200/80">{error}</p>
                 <p className="mt-2 text-xs text-slate-400">
-                  Ensure the Spring Boot backend is running (e.g., at <code className="font-mono text-cyan-400">http://localhost:8080</code> or your public Oracle VM URL).
+                  Ensure the Spring Boot backend is running (e.g., at <code className="font-mono text-sky-400">http://localhost:8080</code> or your public Oracle VM URL).
                 </p>
                 <button
                   onClick={loadData}
-                  className="mt-4 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition"
+                  className="mt-4 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition shadow-sm"
                 >
                   Retry Connection
                 </button>
@@ -312,7 +301,7 @@ export default function Home() {
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="h-64 rounded-2xl border border-slate-800/80 bg-slate-900/50 p-6 animate-pulse"
+                  className="h-64 rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 animate-pulse"
                 >
                   <div className="h-6 w-3/4 rounded-lg bg-slate-800" />
                   <div className="mt-4 h-12 w-full rounded-xl bg-slate-800/60" />
@@ -328,8 +317,8 @@ export default function Home() {
           {/* Empty State */}
           {!isLoading && !error && filteredChannels.length === 0 && (
             totalChannels === 0 ? (
-              <div className="my-8 flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950 p-8 sm:p-12 text-center shadow-xl backdrop-blur-md">
-                <h3 className="text-2xl font-extrabold text-white sm:text-3xl tracking-tight">
+              <div className="my-8 flex flex-col items-center justify-center rounded-2xl border border-slate-800/80 bg-slate-900/40 p-8 sm:p-12 text-center shadow-sm backdrop-blur-md">
+                <h3 className="text-2xl font-bold text-white sm:text-3xl tracking-tight">
                   Welcome to Beat Research
                 </h3>
                 <p className="mt-3 max-w-lg text-sm sm:text-base text-slate-300 leading-relaxed">
@@ -338,25 +327,25 @@ export default function Home() {
 
                 {/* 3 Step Onboarding Flow */}
                 <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 max-w-3xl w-full text-left">
-                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
-                    <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">1</span>
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
+                    <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs uppercase tracking-wider mb-1">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-500/20 text-[11px]">1</span>
                       <span>Choose Topic</span>
                     </div>
                     <p className="text-xs text-slate-400">Specify any keyword or query, like &quot;AI Hardware&quot; or &quot;Biotech&quot;.</p>
                   </div>
 
-                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
-                    <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">2</span>
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
+                    <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs uppercase tracking-wider mb-1">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-500/20 text-[11px]">2</span>
                       <span>Set Schedule</span>
                     </div>
                     <p className="text-xs text-slate-400">Pick your daily delivery time, timezone, and article count.</p>
                   </div>
 
-                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4">
-                    <div className="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-wider mb-1">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/20 text-[11px]">3</span>
+                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4">
+                    <div className="flex items-center space-x-2 text-sky-400 font-bold text-xs uppercase tracking-wider mb-1">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-sky-500/20 text-[11px]">3</span>
                       <span>Receive Digests</span>
                     </div>
                     <p className="text-xs text-slate-400">Beat automatically fetches, ranks, and emails synthesized reports.</p>
@@ -368,19 +357,19 @@ export default function Home() {
                     setEditingChannel(null);
                     setIsFormModalOpen(true);
                   }}
-                  className="mt-8 flex items-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-6 py-3 text-sm sm:text-base font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.35)] transition transform hover:-translate-y-0.5 focus:outline-none"
+                  className="mt-8 flex items-center space-x-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 hover:bg-slate-700/90 px-6 py-3 text-sm sm:text-base font-medium text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition transform hover:-translate-y-0.5 focus:outline-none"
                 >
-                  <Plus className="h-5 w-5 text-cyan-400" />
+                  <Plus className="h-5 w-5 text-sky-400" />
                   <span>Create Your First Channel</span>
                 </button>
               </div>
             ) : (
-              <div className="my-12 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  <Radio className="h-8 w-8" />
+              <div className="my-12 flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/30 p-12 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-800 text-sky-400 border border-slate-700/70 shadow-sm">
+                  <Radio className="h-7 w-7" />
                 </div>
-                <h3 className="mt-4 text-xl font-bold text-white">No channels match filter</h3>
-                <p className="mt-2 max-w-md text-sm text-slate-400 leading-relaxed">
+                <h3 className="mt-4 text-lg font-bold text-white">No channels match filter</h3>
+                <p className="mt-2 max-w-md text-xs sm:text-sm text-slate-400 leading-relaxed">
                   Try clearing your search query or active filter to see all channels.
                 </p>
                 <button
@@ -388,9 +377,9 @@ export default function Home() {
                     setSearchQuery('');
                     setFilterActiveOnly(false);
                   }}
-                  className="mt-6 flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-5 py-2.5 text-sm font-medium text-slate-200 hover:text-white border border-slate-700 border-b-[3px] border-b-slate-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
+                  className="mt-6 flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-5 py-2.5 text-sm font-medium text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition"
                 >
-                  <Plus className="h-4 w-4 text-cyan-400" />
+                  <Plus className="h-4 w-4 text-sky-400" />
                   <span>Clear Filters</span>
                 </button>
               </div>
