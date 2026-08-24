@@ -17,7 +17,7 @@ export function Header({ onOpenCreateModal, isBackendOnline }: HeaderProps) {
         <Link href="/" className="group flex items-center space-x-3 transition">
           <div>
             <div className="flex items-center space-x-1.5">
-              <h1 className="font-mono text-xl sm:text-2xl font-bold tracking-tight text-white">
+              <h1 className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-white">
                 BEAT
               </h1>
             </div>
