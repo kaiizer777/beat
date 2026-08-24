@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={outfit.variable}>
-      <body className="font-sans bg-[#090d16] text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
+      <body className="font-sans bg-[#090a0f] text-zinc-100 antialiased selection:bg-blue-600 selection:text-white">
         <Providers>{children}</Providers>
       </body>
     </html>

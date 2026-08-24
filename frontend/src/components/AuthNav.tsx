@@ -15,16 +15,16 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   if (status === 'loading') {
-    return <div className="text-xs text-slate-400 animate-pulse">Loading auth...</div>;
+    return <div className="text-xs text-zinc-400 animate-pulse">Loading auth...</div>;
   }
 
   if (!session) {
     return (
       <Link
         href="/login"
-        className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/90 text-slate-200 hover:text-white font-medium px-3.5 py-1.5 rounded-xl border border-slate-700/80 shadow-sm transition"
+        className="flex items-center space-x-2 text-xs bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-200 hover:text-white font-medium px-3.5 py-2 rounded-xl border border-zinc-700 border-b-[3px] border-b-zinc-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
       >
-        <User className="h-3.5 w-3.5 text-sky-400" />
+        <User className="h-3.5 w-3.5 text-blue-400" />
         <span>Sign in</span>
       </Link>
     );
@@ -43,19 +43,19 @@ export function AuthNav({ onOpenAccountModal }: AuthNavProps) {
       <div className="flex items-center space-x-2">
         <button
           onClick={handleOpenModal}
-          className="flex items-center space-x-2 text-xs bg-slate-800 hover:bg-slate-700/80 text-slate-200 font-medium px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-sm transition"
+          className="flex items-center space-x-2 text-xs bg-zinc-800/90 hover:bg-zinc-750 text-zinc-200 font-medium px-3 py-1.5 rounded-xl border border-zinc-700 border-b-[3px] border-b-zinc-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)]"
           title="Account Settings"
         >
-          <div className="h-5 w-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-[10px]">
+          <div className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
             {session.user?.email ? session.user.email.charAt(0).toUpperCase() : 'U'}
           </div>
           <span className="hidden sm:inline max-w-[140px] truncate">{session.user?.email}</span>
-          <Settings className="h-3.5 w-3.5 text-slate-400" />
+          <Settings className="h-3.5 w-3.5 text-zinc-400" />
         </button>
 
         <button
           onClick={() => signOut()}
-          className="text-xs bg-slate-800 hover:bg-slate-700/80 text-slate-400 hover:text-slate-200 p-2 rounded-xl border border-slate-700/80 shadow-sm transition"
+          className="text-xs bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-400 hover:text-zinc-200 p-2 rounded-xl border border-zinc-700 border-b-[3px] border-b-zinc-950 shadow-[0_2px_5px_rgba(0,0,0,0.3)] transition"
           title="Sign out"
         >
           <LogOut className="h-3.5 w-3.5" />

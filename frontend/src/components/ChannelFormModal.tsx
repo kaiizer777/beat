@@ -130,19 +130,22 @@ export function ChannelFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-black/75 backdrop-blur-md animate-fade-in font-sans">
-      <div className="relative my-8 w-full max-w-xl rounded-2xl border border-slate-800 bg-[#0d131f] p-6 sm:p-7 shadow-2xl text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-sans overflow-hidden">
+      <div className="relative w-full max-w-xl rounded-3xl border border-zinc-800 bg-gradient-to-b from-[#131522] via-[#0e1017] to-[#0a0b10] p-6 sm:p-7 shadow-2xl shadow-blue-950/30 text-zinc-100">
+        {/* Glow Accent Line */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-5">
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5 mb-4.5">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-sky-400 border border-slate-700/80 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 border-b-[3px] border-b-blue-500/30 shadow-[0_2px_5px_rgba(0,0,0,0.3)]">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
                 {editingChannel ? 'Edit News Channel' : 'Create Research Channel'}
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-400">
                 Configure schedule & topic preferences for automatic digests
               </p>
             </div>
@@ -150,7 +153,7 @@ export function ChannelFormModal({
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="rounded-lg border border-slate-800 bg-slate-900/80 p-1.5 text-slate-400 hover:text-white hover:border-slate-700 transition disabled:opacity-50"
+            className="rounded-xl border border-zinc-800 bg-zinc-900 p-1.5 text-zinc-400 hover:text-white hover:border-zinc-700 transition disabled:opacity-50"
           >
             <X className="h-4 w-4" />
           </button>
@@ -158,17 +161,17 @@ export function ChannelFormModal({
 
         {/* Global Error Banner */}
         {globalError && (
-          <div className="mb-5 flex items-start space-x-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300">
+          <div className="mb-4 flex items-start space-x-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
             <AlertCircle className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
             <span>{globalError}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Channel Name */}
           <div>
-            <label htmlFor="channel-name" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Channel Name <span className="text-sky-400">*</span>
+            <label htmlFor="channel-name" className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+              Channel Name <span className="text-blue-400">*</span>
             </label>
             <input
               id="channel-name"
@@ -180,24 +183,24 @@ export function ChannelFormModal({
               }}
               onBlur={(e) => validateField('name', e.target.value)}
               placeholder="e.g. AI & LLM Innovations"
-              className={`w-full rounded-xl border bg-slate-950/60 px-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-sm focus:outline-none transition ${
+              className={`w-full rounded-xl border bg-zinc-950/70 px-4 py-2.5 text-sm text-white placeholder-zinc-500 shadow-inner focus:outline-none transition ${
                 fieldErrors.name
-                  ? 'border-rose-500/60 focus:ring-1 focus:ring-rose-500/20'
-                  : 'border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20'
+                  ? 'border-rose-500/60 focus:ring-2 focus:ring-rose-500/20'
+                  : 'border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
               }`}
             />
             {fieldErrors.name && (
-              <p className="mt-1.5 text-xs text-rose-400 font-medium">{fieldErrors.name}</p>
+              <p className="mt-1 text-xs text-rose-400 font-medium">{fieldErrors.name}</p>
             )}
           </div>
 
           {/* Research Prompt Query */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="topic-query" className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Research Prompt <span className="text-sky-400">*</span>
+              <label htmlFor="topic-query" className="block text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                Research Prompt <span className="text-blue-400">*</span>
               </label>
-              <span className="text-[11px] text-slate-500">TinyFish multi-query search target</span>
+              <span className="text-[11px] text-zinc-500">TinyFish multi-query search target</span>
             </div>
             <textarea
               id="topic-query"
@@ -209,32 +212,32 @@ export function ChannelFormModal({
               }}
               onBlur={(e) => validateField('topicQuery', e.target.value)}
               placeholder="Specify keywords, domains, or research targets (e.g. 'AI Hardware, GPU architectures, semiconductor supply chain')..."
-              className={`w-full rounded-xl border bg-slate-950/60 p-3 text-xs text-white placeholder-slate-500 shadow-sm focus:outline-none transition font-sans leading-relaxed ${
+              className={`w-full rounded-xl border bg-zinc-950/70 p-3 text-xs sm:text-sm text-white placeholder-zinc-500 shadow-inner focus:outline-none transition font-sans leading-relaxed ${
                 fieldErrors.topicQuery
-                  ? 'border-rose-500/60 focus:ring-1 focus:ring-rose-500/20'
-                  : 'border-slate-800 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20'
+                  ? 'border-rose-500/60 focus:ring-2 focus:ring-rose-500/20'
+                  : 'border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
               }`}
             />
             {fieldErrors.topicQuery && (
-              <p className="mt-1.5 text-xs text-rose-400 font-medium">{fieldErrors.topicQuery}</p>
+              <p className="mt-1 text-xs text-rose-400 font-medium">{fieldErrors.topicQuery}</p>
             )}
           </div>
 
           {/* Target Article Count with Presets & Slider */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-slate-300">
-                <Hash className="h-3.5 w-3.5 text-sky-400" />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                <Hash className="h-3.5 w-3.5 text-blue-400" />
                 <span>Articles Per Digest</span>
               </label>
-              <span className="rounded-full bg-sky-500/10 px-3 py-0.5 text-xs font-bold text-sky-300 border border-sky-500/20">
+              <span className="rounded-full bg-blue-500/10 px-3 py-0.5 text-xs font-bold text-blue-300 border border-blue-500/20">
                 {articleCount} articles
               </span>
             </div>
 
             {/* Quick Presets */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] text-slate-500 mr-1">Presets:</span>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-[11px] text-zinc-500 mr-1">Presets:</span>
               {ARTICLE_PRESETS.map((count) => (
                 <button
                   key={count}
@@ -242,8 +245,8 @@ export function ChannelFormModal({
                   onClick={() => setArticleCount(count)}
                   className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                     articleCount === count
-                      ? 'bg-slate-800 text-sky-300 border border-slate-700 shadow-sm'
-                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                      ? 'bg-zinc-800 text-blue-300 border border-zinc-700 border-b-[2px] border-b-zinc-950 shadow-sm'
+                      : 'bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
                   }`}
                 >
                   {count}
@@ -259,16 +262,16 @@ export function ChannelFormModal({
               step={1}
               value={articleCount}
               onChange={(e) => setArticleCount(Number(e.target.value))}
-              className="w-full accent-sky-500 cursor-pointer"
+              className="w-full accent-blue-500 cursor-pointer"
             />
           </div>
 
           {/* Schedule Time & Timezone Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             {/* Daily Delivery Time */}
             <div>
-              <label htmlFor="cron-time" className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                <Clock className="h-3.5 w-3.5 text-sky-400" />
+              <label htmlFor="cron-time" className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+                <Clock className="h-3.5 w-3.5 text-blue-400" />
                 <span>Daily Run Time</span>
               </label>
               <input
@@ -276,24 +279,24 @@ export function ChannelFormModal({
                 type="time"
                 value={cronTime}
                 onChange={(e) => setCronTime(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-3.5 py-2.5 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/20 transition color-scheme-dark"
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-3.5 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition color-scheme-dark"
               />
             </div>
 
             {/* Timezone Selector */}
             <div>
-              <label htmlFor="timezone" className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                <Globe className="h-3.5 w-3.5 text-slate-400" />
+              <label htmlFor="timezone" className="flex items-center space-x-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+                <Globe className="h-3.5 w-3.5 text-sky-400" />
                 <span>Timezone</span>
               </label>
               <select
                 id="timezone"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5 text-xs text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/20 transition"
+                className="w-full rounded-xl border border-zinc-800 bg-zinc-950/70 px-3 py-2.5 text-xs text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
               >
                 {TIMEZONE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
+                  <option key={opt.value} value={opt.value} className="bg-zinc-900 text-white">
                     {opt.label}
                   </option>
                 ))}
@@ -303,25 +306,25 @@ export function ChannelFormModal({
 
           {/* Active Schedule Toggle */}
           <div
-            className={`flex items-center justify-between rounded-xl border p-4 transition ${
+            className={`flex items-center justify-between rounded-2xl border p-3.5 sm:p-4 transition ${
               isActive
-                ? 'border-slate-700 bg-slate-900/60'
-                : 'border-slate-800 bg-slate-950/40'
+                ? 'border-blue-500/30 bg-blue-500/5'
+                : 'border-zinc-800 bg-zinc-950/40'
             }`}
           >
             <div className="flex items-center space-x-3">
               <div
                 className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
                   isActive
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : 'bg-slate-800 text-slate-500 border-slate-700'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    : 'bg-zinc-800 text-zinc-500 border-zinc-700'
                 }`}
               >
                 <Radio className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-xs font-bold text-white">Automated Schedule Active</p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-zinc-400">
                   {isActive
                     ? 'Digest pipeline will run automatically every day'
                     : 'Automatic triggers paused until activated'}
@@ -332,12 +335,12 @@ export function ChannelFormModal({
             <button
               type="button"
               onClick={() => setIsActive(!isActive)}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border border-slate-700 transition-colors duration-200 ease-in-out focus:outline-none ${
-                isActive ? 'bg-sky-500' : 'bg-slate-800'
+              className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                isActive ? 'bg-blue-600' : 'bg-zinc-800'
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
                   isActive ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -350,7 +353,7 @@ export function ChannelFormModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-xl border border-slate-800 bg-slate-900/80 px-5 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition shadow-sm"
+              className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-5 py-2.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition"
             >
               Cancel
             </button>
@@ -358,16 +361,16 @@ export function ChannelFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center space-x-2 rounded-xl bg-slate-800 hover:bg-slate-700/90 px-6 py-2.5 text-xs font-bold text-slate-200 hover:text-white border border-slate-700/80 shadow-sm transition disabled:opacity-50"
+              className="flex items-center space-x-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-2.5 text-xs font-bold text-white border border-blue-500/40 border-b-[3px] border-b-blue-900 shadow-[0_2px_10px_rgba(37,99,235,0.4)] transition disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   <span>Saving Channel...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="h-3.5 w-3.5 text-sky-400" />
+                  <Zap className="h-3.5 w-3.5 text-blue-200" />
                   <span>{editingChannel ? 'Update Channel' : 'Create Channel'}</span>
                 </>
               )}

@@ -4,43 +4,64 @@
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ─── Studio Dark Canvas ─────────────────────────────────────────────────── */
-:root {
-  --bg-canvas: #090d16;
-  --bg-surface: #0f1626;
-  --bg-card: rgba(15, 22, 38, 0.65);
+/* ─── Aurora / orb animations ───────────────────────────────────────────── */
+@keyframes auroraFloat {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(40px, -30px) scale(1.06); }
+  66%  { transform: translate(-25px, 20px) scale(0.96); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
-body {
-  background-color: #090d16;
-  color: #f1f5f9;
+@keyframes auroraFloat2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-35px, 25px) scale(1.05); }
+  66%  { transform: translate(20px, -40px) scale(0.97); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
-/* ─── Subtle Grid Mesh ─────────────────────────────────────────────────── */
-.bg-studio-grid {
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.06), transparent 70%),
-    radial-gradient(circle, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px;
+@keyframes auroraFloat3 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(20px, 30px) scale(1.04); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.aurora-orb-1 { animation: auroraFloat  18s ease-in-out infinite; }
+.aurora-orb-2 { animation: auroraFloat2 22s ease-in-out infinite; }
+.aurora-orb-3 { animation: auroraFloat3 26s ease-in-out infinite; }
+
+/* ─── Dot grid overlay ──────────────────────────────────────────────────── */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ─── Noise texture overlay ─────────────────────────────────────────────── */
+.bg-noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ─── Transitions ────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.99); }
+  from { opacity: 0; transform: scale(0.98); }
   to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in  { animation: fadeIn  0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-slide-up { animation: slideUp 0.2s  cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in  { animation: fadeIn  0.2s  cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-up { animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
-.custom-scrollbar::-webkit-scrollbar       { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.3); border-radius: 9999px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.5); border-radius: 9999px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.8); }
+.custom-scrollbar::-webkit-scrollbar       { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(18,19,26,0.6); border-radius: 9999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(63,63,70,0.6);  border-radius: 9999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.6); }
 

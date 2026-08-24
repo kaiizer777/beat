@@ -36,22 +36,22 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   const getBg = () => {
     switch (toast.type) {
       case 'success':
-        return 'border-emerald-500/30 bg-[#0d131f]/95 text-emerald-300 shadow-lg';
+        return 'border-emerald-500/30 bg-zinc-900/95 text-emerald-300 shadow-emerald-500/10';
       case 'error':
-        return 'border-rose-500/30 bg-[#0d131f]/95 text-rose-300 shadow-lg';
+        return 'border-rose-500/30 bg-zinc-900/95 text-rose-300 shadow-rose-500/10';
       default:
-        return 'border-sky-500/30 bg-[#0d131f]/95 text-sky-300 shadow-lg';
+        return 'border-blue-500/30 bg-zinc-900/95 text-blue-300 shadow-blue-500/10';
     }
   };
 
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />;
+        return <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />;
+        return <AlertCircle className="h-5 w-5 text-rose-400 flex-shrink-0" />;
       default:
-        return <Info className="h-4 w-4 text-sky-400 flex-shrink-0 mt-0.5" />;
+        return <Info className="h-5 w-5 text-blue-400 flex-shrink-0" />;
     }
   };
 
@@ -63,12 +63,12 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
         {getIcon()}
         <div>
           <h4 className="text-sm font-semibold text-white">{toast.title}</h4>
-          {toast.message && <p className="mt-0.5 text-xs text-slate-300">{toast.message}</p>}
+          {toast.message && <p className="mt-0.5 text-xs text-zinc-300">{toast.message}</p>}
         </div>
       </div>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="ml-3 text-slate-400 hover:text-white transition"
+        className="ml-3 text-zinc-400 hover:text-white transition"
       >
         <X className="h-4 w-4" />
       </button>
