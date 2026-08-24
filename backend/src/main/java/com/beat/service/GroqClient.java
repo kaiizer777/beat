@@ -70,8 +70,8 @@ public class GroqClient {
 
         String jsonPayload = objectMapper.writeValueAsString(requestBody);
 
-        int maxRetries = 3;
-        long waitTimeMs = 2000;
+        int maxRetries = 4;
+        long waitTimeMs = 5000;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -97,12 +97,13 @@ public class GroqClient {
                     }
                     return cleanJsonString(contentNode.asText());
                 } else if (statusCode == 429) {
-                    log.warn("Groq API rate limited (429) on attempt {}/{} - backing off for {} ms", attempt, maxRetries, waitTimeMs);
+                    long delayMs = extractRetryDelayMs(response, waitTimeMs);
+                    log.warn("Groq API rate limited (429) on attempt {}/{} - backing off for {} ms", attempt, maxRetries, delayMs);
                     if (attempt == maxRetries) {
                         throw new IOException("Groq API rate limit exceeded after " + maxRetries + " attempts. Status 429: " + response.body());
                     }
-                    Thread.sleep(waitTimeMs);
-                    waitTimeMs *= 2;
+                    Thread.sleep(delayMs);
+                    waitTimeMs = Math.min(Math.max(delayMs, waitTimeMs * 2), 15000);
                 } else {
                     throw new IOException("Groq API request failed with status code " + statusCode + ": " + response.body());
                 }
@@ -111,7 +112,7 @@ public class GroqClient {
                     log.warn("Transient network error calling Groq API on attempt {}/{}: {}. Retrying in {} ms...",
                             attempt, maxRetries, e.getMessage(), waitTimeMs);
                     Thread.sleep(waitTimeMs);
-                    waitTimeMs *= 2;
+                    waitTimeMs = Math.min(waitTimeMs * 2, 15000);
                 } else {
                     log.error("Groq API call failed after {} attempts due to network error: {}", maxRetries, e.getMessage());
                     throw e;
@@ -120,6 +121,105 @@ public class GroqClient {
         }
 
         throw new IOException("Failed to communicate with Groq API");
+    }
+
+    private static final java.util.regex.Pattern RESET_TIME_PATTERN =
+            java.util.regex.Pattern.compile("try again in (\\d+(?:\\.\\d+)?)\\s*(m?s|minutes?|seconds?)?", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Determine how long to wait before retrying after an HTTP 429 response.
+     * Inspects Retry-After, x-ratelimit-reset-tokens, x-ratelimit-reset-requests headers,
+     * and the response body error message.
+     */
+    long extractRetryDelayMs(HttpResponse<String> response, long defaultWaitMs) {
+        if (response == null) {
+            return defaultWaitMs;
+        }
+
+        // 1. Check Retry-After header
+        java.util.Optional<String> retryAfterHeader = response.headers().firstValue("retry-after");
+        if (retryAfterHeader.isPresent() && !retryAfterHeader.get().isBlank()) {
+            long parsed = parseSecondsOrDurationToMs(retryAfterHeader.get());
+            if (parsed > 0) {
+                return parsed + 500; // Add 500ms safety buffer
+            }
+        }
+
+        // 2. Check x-ratelimit-reset-tokens header (e.g. "28.35s", "28s", "28350ms")
+        java.util.Optional<String> resetTokensHeader = response.headers().firstValue("x-ratelimit-reset-tokens");
+        if (resetTokensHeader.isPresent() && !resetTokensHeader.get().isBlank()) {
+            long parsed = parseSecondsOrDurationToMs(resetTokensHeader.get());
+            if (parsed > 0) {
+                return parsed + 500;
+            }
+        }
+
+        // 3. Check x-ratelimit-reset-requests header
+        java.util.Optional<String> resetRequestsHeader = response.headers().firstValue("x-ratelimit-reset-requests");
+        if (resetRequestsHeader.isPresent() && !resetRequestsHeader.get().isBlank()) {
+            long parsed = parseSecondsOrDurationToMs(resetRequestsHeader.get());
+            if (parsed > 0) {
+                return parsed + 500;
+            }
+        }
+
+        // 4. Parse from response body message
+        String body = response.body();
+        if (body != null && !body.isBlank()) {
+            try {
+                JsonNode root = objectMapper.readTree(body);
+                String errorMsg = root.path("error").path("message").asText("");
+                if (!errorMsg.isBlank()) {
+                    long parsed = parseDelayFromMessage(errorMsg);
+                    if (parsed > 0) {
+                        return parsed + 500;
+                    }
+                }
+            } catch (Exception ignored) {
+                long parsed = parseDelayFromMessage(body);
+                if (parsed > 0) {
+                    return parsed + 500;
+                }
+            }
+        }
+
+        return defaultWaitMs;
+    }
+
+    private long parseDelayFromMessage(String msg) {
+        java.util.regex.Matcher matcher = RESET_TIME_PATTERN.matcher(msg);
+        if (matcher.find()) {
+            try {
+                double val = Double.parseDouble(matcher.group(1));
+                String unit = matcher.group(2);
+                if (unit != null && (unit.equalsIgnoreCase("ms") || unit.equalsIgnoreCase("millisecond") || unit.equalsIgnoreCase("milliseconds"))) {
+                    return (long) val;
+                } else if (unit != null && (unit.toLowerCase().startsWith("m") && !unit.toLowerCase().startsWith("ms"))) {
+                    return (long) (val * 60_000);
+                } else {
+                    return (long) (val * 1000);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return -1;
+    }
+
+    private long parseSecondsOrDurationToMs(String raw) {
+        if (raw == null || raw.isBlank()) return -1;
+        String trimmed = raw.trim().toLowerCase();
+        try {
+            if (trimmed.endsWith("ms")) {
+                return (long) Double.parseDouble(trimmed.substring(0, trimmed.length() - 2).trim());
+            } else if (trimmed.endsWith("s")) {
+                return (long) (Double.parseDouble(trimmed.substring(0, trimmed.length() - 1).trim()) * 1000);
+            } else if (trimmed.endsWith("m")) {
+                return (long) (Double.parseDouble(trimmed.substring(0, trimmed.length() - 1).trim()) * 60_000);
+            } else {
+                return (long) (Double.parseDouble(trimmed) * 1000);
+            }
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private String cleanJsonString(String raw) {

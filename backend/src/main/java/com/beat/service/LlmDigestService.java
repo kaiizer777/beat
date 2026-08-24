@@ -138,8 +138,8 @@ public class LlmDigestService {
             if (text == null || text.isBlank()) {
                 text = article.getSnippet();
             }
-            if (text != null && text.length() > 1500) {
-                text = text.substring(0, 1500) + "...";
+            if (text != null && text.length() > 700) {
+                text = text.substring(0, 700) + "...";
             }
             userPrompt.append("Content: ").append(text != null ? text : "").append("\n\n");
         }
@@ -222,7 +222,7 @@ public class LlmDigestService {
         // Fallback: when synthesis failed or returned no blurbs, use the search snippet
         // as the base. The snippet is typically 1-2 sentences (~120-140 chars), which is
         // too short for the digest UI. If we landed on a short blurb via this path, expand
-        // it with a templated 2nd sentence so the user gets the "2-3 sentence" reading
+        // it with a clean factual 2nd sentence so the user gets the "2-3 sentence" reading
         // experience even when the LLM is unavailable.
         for (RawArticle article : rankedArticles) {
             if (article.getSummaryBlurb() == null || article.getSummaryBlurb().isBlank()) {
@@ -235,26 +235,22 @@ public class LlmDigestService {
     }
 
     /**
-     * Wrap a short search snippet into a 2-sentence blurb by appending a templated
-     * "why it matters" line. Used only as a fallback when the synthesize LLM call
-     * failed (typically due to Groq TPD exhaustion). Kept simple and deterministic —
-     * we explicitly do NOT call Groq again, both because the limit is the reason we
-     * are here, and because templated text is fine for a degraded-mode blurb.
+     * Wrap a short search snippet into a 2-sentence blurb by appending a clean,
+     * factual summary line. Used only as a fallback when the synthesize LLM call
+     * failed (typically due to Groq TPM exhaustion). Kept strictly factual and
+     * derived only from the headline and publisher to avoid triggering fact-checker
+     * rejections on fabricated phrases.
      */
-    private String expandShortSnippet(String snippet, RawArticle article) {
+    String expandShortSnippet(String snippet, RawArticle article) {
         String trimmed = snippet.trim();
         // Ensure snippet ends with terminal punctuation so the appended sentence reads naturally.
         char last = trimmed.isEmpty() ? '.' : trimmed.charAt(trimmed.length() - 1);
         if (last != '.' && last != '!' && last != '?') {
             trimmed = trimmed + ".";
         }
-        String publisher = article.getPublisher() != null && !article.getPublisher().isBlank()
+        String publisher = (article != null && article.getPublisher() != null && !article.getPublisher().isBlank())
                 ? article.getPublisher() : "the source";
-        // Templated 2nd sentence. Avoids "external knowledge" since it only restates that
-        // the item is reporting current industry activity and points the reader at the
-        // publisher for the full story.
-        return trimmed + " Reported by " + publisher + ", the story reflects an active beat "
-                + "the digest tracks and is worth a click-through to read in full.";
+        return trimmed + " Full reporting and continuing coverage are provided by " + publisher + ".";
     }
 
     /**
@@ -285,8 +281,8 @@ public class LlmDigestService {
         if (text == null || text.isBlank()) {
             text = article.getSnippet();
         }
-        if (text != null && text.length() > 1500) {
-            text = text.substring(0, 1500) + "...";
+        if (text != null && text.length() > 700) {
+            text = text.substring(0, 700) + "...";
         }
 
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));

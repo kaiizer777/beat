@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -107,5 +108,33 @@ public class LlmDigestServiceTest {
 
         assertTrue(result.isAccepted());
         assertEquals("a corrected blurb", result.getRefinedBlurb());
+    }
+
+    @Test
+    void expandShortSnippet_producesCleanFactualFallbackWithoutFabricatedPhrases() {
+        RawArticle article = new RawArticle(
+                "OpenAI launches new model", "https://example.com/openai", "The company announced a breakthrough today",
+                "Reuters", "2026-08-24T00:00:00Z", "Full text body", null);
+
+        String fallback = service.expandShortSnippet(article.getSnippet(), article);
+
+        assertEquals("The company announced a breakthrough today. Full reporting and continuing coverage are provided by Reuters.", fallback);
+        assertTrue(!fallback.contains("active beat the digest tracks"), "Must not contain trigger phrase");
+        assertTrue(!fallback.contains("worth a click-through"), "Must not contain promotional phrase");
+    }
+
+    @Test
+    void synthesizeBlurbs_truncatesSourceTextAndSetsBlurbs() throws Exception {
+        when(groqClient.generateJsonResponse(anyString(), anyString()))
+                .thenReturn("{\"blurbs\": [\"Sentence one about the model. Sentence two why it matters to developers and engineers.\"]}");
+
+        String longContent = "A".repeat(1200);
+        RawArticle article = new RawArticle(
+                "Big AI News", "https://example.com/ai", "Short snippet", "TechCrunch",
+                "2026-08-24T00:00:00Z", longContent, null);
+
+        service.synthesizeBlurbs(List.of(article), "ai models", Instant.now());
+
+        assertEquals("Sentence one about the model. Sentence two why it matters to developers and engineers.", article.getSummaryBlurb());
     }
 }

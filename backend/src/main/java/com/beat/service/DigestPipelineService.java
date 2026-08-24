@@ -122,7 +122,8 @@ public class DigestPipelineService {
             List<RawArticle> verifiedArticles = new ArrayList<>();
             int originalCount = rankedArticles.size();
             Map<String, Integer> rejectionReasonCounts = new LinkedHashMap<>();
-            for (RawArticle article : rankedArticles) {
+            for (int i = 0; i < rankedArticles.size(); i++) {
+                RawArticle article = rankedArticles.get(i);
                 LlmDigestService.VerificationResult verifyResult = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
                 if (verifyResult.isAccepted()) {
                     article.setSummaryBlurb(verifyResult.getRefinedBlurb());
@@ -132,6 +133,16 @@ public class DigestPipelineService {
                     log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'. Reason: {}",
                             runId, article.getTitle(), reason);
                     rejectionReasonCounts.merge(reason, 1, Integer::sum);
+                }
+
+                // Rate-limit pause (1000ms throttle between sequential fact-check calls to prevent TPM bursting)
+                if (i < rankedArticles.size() - 1) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
 

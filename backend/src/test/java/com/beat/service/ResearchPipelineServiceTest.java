@@ -78,4 +78,15 @@ public class ResearchPipelineServiceTest {
         assertEquals("Fresh", finalPool.get(0).getTitle());
         assertEquals("Older Fresh", finalPool.get(1).getTitle());
     }
+
+    @Test
+    void cleanTopic_sanitizesNumberRangesAndNoisePatterns() {
+        assertEquals("ai model", researchPipelineService.cleanTopic("latest ai model news past 2-3 days"));
+        assertEquals("ai model", researchPipelineService.cleanTopic("latest ai model news past 24-48 hours"));
+        assertEquals("ai model", researchPipelineService.cleanTopic("ai model 48h"));
+        assertEquals("quantum computing", researchPipelineService.cleanTopic("quantum computing 7d news"));
+        assertEquals("crypto developments", researchPipelineService.cleanTopic("top 10 crypto developments this week"));
+        assertEquals("electric vehicles", researchPipelineService.cleanTopic("breaking electric vehicles news"));
+        assertEquals("gpt-4 vision", researchPipelineService.cleanTopic("gpt-4 vision latest updates"));
+    }
 }

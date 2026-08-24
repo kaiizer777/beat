@@ -249,18 +249,24 @@ public class ResearchPipelineService {
     private static final java.util.Set<String> NOISE_WORDS = java.util.Set.of(
             "past", "day", "days", "hour", "hours", "week", "weeks", "month", "months", "year", "years",
             "today", "yesterday", "latest", "top", "recent", "news", "daily", "breaking", "new", "update",
-            "updates", "best", "24h", "48h", "7d", "the", "in", "for", "on", "of", "and", "to", "a", "an",
-            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "24", "48"
+            "updates", "best", "the", "in", "for", "on", "of", "and", "to", "a", "an", "this", "about"
     );
 
-    private String cleanTopic(String topic) {
+    private static final java.util.regex.Pattern NUMBER_RANGE_OR_TIME_PATTERN = java.util.regex.Pattern.compile(
+            "^(\\d+([-\\/]\\d+)?|\\d+to\\d+)(h|d|w|m|y|hr|hrs|day|days|wk|wks|week|weeks|mo|mos|month|months|yr|yrs|year|years|min|mins)?$",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
+    String cleanTopic(String topic) {
         if (topic == null || topic.isBlank()) return "";
         String[] tokens = topic.trim().toLowerCase().split("\\s+");
         List<String> meaningful = new ArrayList<>();
         for (String token : tokens) {
             String cleaned = token.replaceAll("[^a-zA-Z0-9-]", "");
-            if (!cleaned.isBlank() && !NOISE_WORDS.contains(cleaned)) {
-                meaningful.add(token);
+            if (!cleaned.isBlank()
+                    && !NOISE_WORDS.contains(cleaned)
+                    && !NUMBER_RANGE_OR_TIME_PATTERN.matcher(cleaned).matches()) {
+                meaningful.add(cleaned);
             }
         }
         return meaningful.isEmpty() ? topic.trim() : String.join(" ", meaningful);
