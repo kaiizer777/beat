@@ -21,7 +21,7 @@ export function AccountModal({ isOpen, onClose }: AccountModalProps) {
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div
         className="w-full max-w-md rounded-2xl border-x border-t border-slate-700 border-b-[8px] border-b-slate-950 bg-slate-900 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-slate-100 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
