@@ -189,11 +189,18 @@ export default function Home() {
   const activeChannels = channels.filter((c) => c.isActive).length;
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white">
-      {/* Background Gradient Orbs */}
+    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white relative">
+      {/* Enhanced Ambient Background System */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-cyan-600/10 blur-3xl" />
-        <div className="absolute top-1/3 -right-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
+        {/* Subtle grid pattern with radial spotlight mask */}
+        <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_65%,transparent_100%)] opacity-50" />
+        
+        {/* Center-top ambient cyan spotlight cone */}
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[550px] w-[950px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none" />
+        
+        {/* Deep ambient peripheral atmospheric glows */}
+        <div className="absolute top-1/4 -right-48 h-[400px] w-[400px] rounded-full bg-blue-600/10 blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/2 -left-48 h-[400px] w-[400px] rounded-full bg-cyan-600/8 blur-[140px] pointer-events-none" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
@@ -210,7 +217,7 @@ export default function Home() {
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           {/* Top Info Banner & Stats */}
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
+            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 <Radio className="h-6 w-6" />
               </div>
@@ -220,7 +227,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
+            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Zap className="h-6 w-6" />
               </div>
@@ -230,7 +237,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
+            <div className="flex items-center space-x-4 rounded-2xl border border-white/[0.07] bg-slate-900/40 p-5 backdrop-blur-md shadow-[0_8px_25px_rgba(0,0,0,0.4)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
                 <Layers className="h-6 w-6" />
               </div>
@@ -250,7 +257,7 @@ export default function Home() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search channels by name or topic..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/90 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-inner focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                className="w-full rounded-xl border border-white/[0.08] bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 shadow-inner backdrop-blur-md focus:border-cyan-500/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
               />
             </div>
 

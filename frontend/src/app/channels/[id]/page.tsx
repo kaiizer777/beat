@@ -246,11 +246,18 @@ export default function ChannelDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white">
-      {/* Background Gradient Orbs */}
+    <div className="min-h-screen bg-black text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-white relative">
+      {/* Enhanced Ambient Background System */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-96 w-96 rounded-full bg-cyan-600/10 blur-3xl" />
-        <div className="absolute top-1/3 -right-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl" />
+        {/* Subtle grid pattern with radial spotlight mask */}
+        <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_65%,transparent_100%)] opacity-50" />
+        
+        {/* Center-top ambient cyan spotlight cone */}
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[550px] w-[950px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none" />
+        
+        {/* Deep ambient peripheral atmospheric glows */}
+        <div className="absolute top-1/4 -right-48 h-[400px] w-[400px] rounded-full bg-blue-600/10 blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/2 -left-48 h-[400px] w-[400px] rounded-full bg-cyan-600/8 blur-[140px] pointer-events-none" />
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
