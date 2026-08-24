@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import Resend from "next-auth/providers/resend";
 import { prisma } from "@/lib/prisma";
 import { SignJWT, jwtVerify } from "jose";
+import { sendVerificationRequest } from "@/lib/email-router";
 
 const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
 const resendApiKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY || "";
@@ -15,6 +16,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Resend({
       apiKey: resendApiKey,
       from: process.env.RESEND_FROM_EMAIL || "Beat Digest <onboarding@resend.dev>",
+      sendVerificationRequest,
     }),
   ],
   session: {
