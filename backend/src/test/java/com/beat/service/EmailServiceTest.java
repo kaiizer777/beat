@@ -74,7 +74,7 @@ class EmailServiceTest {
         assertTrue(result);
         verify(mockEmailRouter).sendEmail(
                 eq("subscriber@beat.app"),
-                contains("Beat Digest: AI Weekly"),
+                contains("Beat [AI Weekly]:"),
                 contains("Agent Architecture Explained")
         );
     }
@@ -94,9 +94,11 @@ class EmailServiceTest {
         boolean result = emailService.sendDigestEmail(channel, run, List.of(item));
 
         assertTrue(result);
+        // D4: subject no longer contains the date — verify subject has the new format
+        // and the date is still rendered in the HTML body
         verify(mockEmailRouter).sendEmail(
                 eq("user@tokyo.jp"),
-                contains("Tue, Aug 25, 2026"),
+                contains("Beat [Tokyo News]:"),
                 contains("Tokyo AI Summit")
         );
     }

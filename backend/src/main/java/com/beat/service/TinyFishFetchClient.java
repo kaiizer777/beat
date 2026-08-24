@@ -11,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -19,6 +20,20 @@ public class TinyFishFetchClient {
     private static final Logger log = LoggerFactory.getLogger(TinyFishFetchClient.class);
     private static final String FETCH_API_URL = "https://api.fetch.tinyfish.ai";
     private static final String JINA_READER_PREFIX = "https://r.jina.ai/";
+
+    // E4: Minimum usable content length and paywall signal detection
+    private static final int MIN_CONTENT_CHARS = 500;
+    private static final List<String> PAYWALL_SIGNALS = List.of(
+        "subscribe to read", "sign in to continue", "create a free account",
+        "this article is for subscribers", "paywall", "please log in",
+        "register to access", "become a member", "subscription required"
+    );
+
+    private boolean isUsableContent(String content) {
+        if (content == null || content.trim().length() < MIN_CONTENT_CHARS) return false;
+        String lower = content.toLowerCase(Locale.ENGLISH);
+        return PAYWALL_SIGNALS.stream().noneMatch(lower::contains);
+    }
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -44,14 +59,14 @@ public class TinyFishFetchClient {
 
         // Try TinyFish Fetch first
         FetchResult result = tryTinyFishFetch(url);
-        if (result != null && result.getContent() != null && result.getContent().trim().length() > 100) {
+        if (result != null && isUsableContent(result.getContent())) {
             return result;
         }
 
         // Fallback to Jina AI Reader
         log.info("TinyFish fetch unavailable or returned low content for URL: {}. Retrying with Jina AI Reader...", url);
         FetchResult jinaResult = tryJinaFetch(url);
-        if (jinaResult != null && jinaResult.getContent() != null && jinaResult.getContent().trim().length() > 100) {
+        if (jinaResult != null && isUsableContent(jinaResult.getContent())) {
             return jinaResult;
         }
 

@@ -43,6 +43,13 @@ public class GroqClient {
     }
 
     public String generateJsonResponse(String systemPrompt, String userPrompt) throws IOException, InterruptedException {
+        return generateJsonResponse(systemPrompt, userPrompt, -1);
+    }
+
+    /**
+     * L5: Overload with max_tokens cap. Pass -1 for no cap (existing behaviour).
+     */
+    public String generateJsonResponse(String systemPrompt, String userPrompt, int maxTokens) throws IOException, InterruptedException {
         if (apiKey.isBlank()) {
             throw new IllegalStateException("GROQ_API_KEY is not configured in environment or application.yml");
         }
@@ -63,6 +70,10 @@ public class GroqClient {
         messages.add(userMsg);
 
         requestBody.put("temperature", 0.2);
+
+        if (maxTokens > 0) {
+            requestBody.put("max_tokens", maxTokens);
+        }
 
         ObjectNode responseFormat = objectMapper.createObjectNode();
         responseFormat.put("type", "json_object");

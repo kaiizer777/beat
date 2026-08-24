@@ -36,6 +36,8 @@ public class ResearchPipelineServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(researchPipelineService, "defaultMaxAgeHours", 168);
+        ReflectionTestUtils.setField(researchPipelineService, "blockedDomains",
+                java.util.List.of("slideshare.net", "pinterest.com", "quora.com", "facebook.com"));
     }
 
     @Test
@@ -71,12 +73,13 @@ public class ResearchPipelineServiceTest {
 
         // Verify
         // Stale item (200 hours old) should be filtered out.
-        // Null date item should be filtered out (per freshness filter logic pub != null).
-        // Remaining should be "Fresh" and "Older Fresh".
-        // They should be sorted newest first, so "Fresh" (1 day old) before "Older Fresh" (2 days old).
-        assertEquals(2, finalPool.size());
+        // E2: Null date item is now KEPT (TinyFish news API implies recency).
+        // Remaining should be "Fresh", "Older Fresh", and "Null Date".
+        // Sorted newest first: "Fresh" (1 day old), "Older Fresh" (2 days old), "Null Date" (nulls-last).
+        assertEquals(3, finalPool.size());
         assertEquals("Fresh", finalPool.get(0).getTitle());
         assertEquals("Older Fresh", finalPool.get(1).getTitle());
+        assertEquals("Null Date", finalPool.get(2).getTitle());
     }
 
     @Test

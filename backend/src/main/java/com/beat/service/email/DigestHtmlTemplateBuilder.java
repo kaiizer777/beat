@@ -3,6 +3,8 @@ package com.beat.service.email;
 import com.beat.entity.Channel;
 import com.beat.entity.NewsItem;
 
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class DigestHtmlTemplateBuilder {
@@ -12,16 +14,50 @@ public class DigestHtmlTemplateBuilder {
     }
 
     public static String buildDigestHtml(Channel channel, String formattedDate, List<NewsItem> newsItems) {
+        // D1: Build "Top Signals" TL;DR block from top 3 articles
+        StringBuilder tldrItems = new StringBuilder();
+        if (newsItems != null && !newsItems.isEmpty()) {
+            int tldrCount = Math.min(newsItems.size(), 3);
+            for (int i = 0; i < tldrCount; i++) {
+                NewsItem item = newsItems.get(i);
+                if (item.getTitle() != null && !item.getTitle().isBlank()) {
+                    tldrItems.append("<li style=\"margin-bottom:4px;\">")
+                             .append(escapeHtml(item.getTitle()))
+                             .append("</li>");
+                }
+            }
+        }
+        String tldrHtml = tldrItems.length() > 0 ? """
+            <div style="background:#1e293b;padding:16px 24px;margin-bottom:20px;border-radius:8px;">
+              <p style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0;">
+                Top Signals
+              </p>
+              <ul style="color:#f1f5f9;font-size:14px;line-height:1.8;margin:0;padding-left:20px;">
+                %s
+              </ul>
+            </div>
+            """.formatted(tldrItems.toString()) : "";
+
         StringBuilder itemsHtml = new StringBuilder();
+        itemsHtml.append(tldrHtml);
 
         if (newsItems != null) {
             for (NewsItem item : newsItems) {
                 String sourceTag = (item.getSourceName() != null && !item.getSourceName().isBlank())
                         ? item.getSourceName() : "Web Source";
                 String title = item.getTitle() != null ? escapeHtml(item.getTitle()) : "Untitled Article";
-                String url = item.getUrl() != null ? item.getUrl() : "#";
+                // D3: escapeHtml on URL before injecting into href
+                String url = item.getUrl() != null ? escapeHtml(item.getUrl()) : "#";
                 String blurb = item.getSummaryBlurb() != null ? escapeHtml(item.getSummaryBlurb()) : "";
                 int rank = item.getRankPosition() != null ? item.getRankPosition() : 0;
+
+                // D2: Render publishedAt as "MMM d" if available
+                String pubDate = (item.getPublishedAt() != null)
+                        ? DateTimeFormatter.ofPattern("MMM d").withZone(ZoneOffset.UTC).format(item.getPublishedAt())
+                        : "";
+                String sourceLine = pubDate.isBlank()
+                        ? escapeHtml(sourceTag)
+                        : escapeHtml(sourceTag) + " &middot; " + pubDate;
 
                 itemsHtml.append("""
                     <div style="margin-bottom: 24px; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -36,7 +72,7 @@ public class DigestHtmlTemplateBuilder {
                             %s
                         </p>
                     </div>
-                """.formatted(rank, escapeHtml(sourceTag), url, title, blurb));
+                """.formatted(rank, sourceLine, url, title, blurb));
             }
         }
 
@@ -89,7 +125,7 @@ public class DigestHtmlTemplateBuilder {
                 <div style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                     <div style="background-color: #1e293b; padding: 24px; text-align: center;">
                         <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">BEAT</h1>
-                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">Personalized Research & News Digest</p>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">Personalized Research &amp; News Digest</p>
                     </div>
                     <div style="padding: 32px 24px; text-align: center;">
                         <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1e293b;">Sign in to your account</h2>

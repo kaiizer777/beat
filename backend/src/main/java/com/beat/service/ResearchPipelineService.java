@@ -30,6 +30,10 @@ public class ResearchPipelineService {
     @Value("${digest.freshness.max-age-hours:168}")
     private int defaultMaxAgeHours;
 
+    // E5: Configurable domain blocklist for noise/spam/paywall sources
+    @Value("${digest.source.blocked-domains:slideshare.net,pinterest.com,quora.com,facebook.com}")
+    private List<String> blockedDomains;
+
     private final TinyFishClient tinyFishClient;
     private final TinyFishFetchClient fetchClient;
     private final ArticleDeduplicationService deduplicationService;
@@ -107,6 +111,15 @@ public class ResearchPipelineService {
         metrics.put("perSubQueryCounts", perSubQueryCounts);
         metrics.put("subQueriesWithZeroResults", totalSubQueriesWithZero);
 
+        // E5: Strip blocked-domain articles before any further processing
+        int beforeBlocklist = rawCandidateList.size();
+        rawCandidateList.removeIf(a -> isBlockedDomain(a.getUrl()));
+        int blocklistDropped = beforeBlocklist - rawCandidateList.size();
+        if (blocklistDropped > 0) {
+            log.info("Domain blocklist: dropped {} articles from blocked sources", blocklistDropped);
+        }
+        metrics.put("blocklistDropped", blocklistDropped);
+
         // Phase 2: Freshness Filter
         Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
         int initialSize = rawCandidateList.size();
@@ -122,21 +135,22 @@ public class ResearchPipelineService {
             }
         }
 
+        // E2: null-date articles are kept (TinyFish news API implies recency)
         rawCandidateList = rawCandidateList.stream()
                 .filter(a -> {
                     Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-                    return pub != null && pub.isAfter(cutoff);
+                    return pub == null || pub.isAfter(cutoff);
                 })
                 .collect(Collectors.toList());
         int dropped = initialSize - rawCandidateList.size();
-        log.info("Freshness filter: kept {} / dropped {} (nullOrUnparseable={}, stale={})",
+        log.info("Freshness filter: kept {} / dropped {} (nullKept={}, staleDropped={})",
                 rawCandidateList.size(), dropped, droppedNullOrUnparseable, droppedStale);
         metrics.put("freshnessKept", rawCandidateList.size());
         metrics.put("freshnessDroppedTotal", dropped);
-        metrics.put("freshnessDroppedNullOrUnparseable", droppedNullOrUnparseable);
+        metrics.put("freshnessKeptNullDate", droppedNullOrUnparseable);
         metrics.put("freshnessDroppedStale", droppedStale);
 
-        // Phase 3: Pre-Deduplication Sort by Date (newest first)
+        // Phase 3: Pre-Deduplication Sort by Date (newest first, null-date goes last)
         rawCandidateList.sort(Comparator.comparing(
                 (RawArticle a) -> com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt()),
                 Comparator.nullsLast(Comparator.reverseOrder())
@@ -150,10 +164,8 @@ public class ResearchPipelineService {
         metrics.put("afterPreFetchDedup", deduplicatedCandidates.size());
         metrics.put("preFetchDedupDropped", preDedupSize - deduplicatedCandidates.size());
 
-        // Limit maximum candidate fetches per run to prevent excessive overhead.
-        // Raised to 50 so digest runs with targetCount up to 15 have headroom after
-        // freshness filter + dedup + fact-checker rejection (~30% drop).
-        int fetchLimit = Math.min(deduplicatedCandidates.size(), 50);
+        // F2: Dynamic fetch cap — 3x headroom, min 20, max 60
+        int fetchLimit = Math.min(deduplicatedCandidates.size(), Math.max(targetCount * 3, 20));
         List<RawArticle> fetchedArticles = new ArrayList<>();
 
         // 4. Fetch full text for candidates using TinyFish Fetch + Jina fallback
@@ -211,13 +223,13 @@ public class ResearchPipelineService {
         if (targetCount > 0 && finalPool.size() < targetCount) {
             log.info("Final pool ({}) < targetCount ({}). Running broader-search fallback.",
                     finalPool.size(), targetCount);
-            List<String> broaderQueries = generateBroaderQueries(topicQuery);
+            List<String> broaderQueries = generateBroaderQueries(topicQuery, subQueries);
             log.info("Broader queries: {}", broaderQueries);
 
             // Run the same search→freshness→dedup→fetch→dedup cycle, but on the
             // broader query set. Reuse the same maxAgeHours (the freshness window
             // is per-channel, not per-pass). The same 1000ms / 300ms throttles apply.
-            List<RawArticle> broaderPool = runSearchPass(broaderQueries, maxAgeHours, metrics, "broader");
+            List<RawArticle> broaderPool = runSearchPass(broaderQueries, maxAgeHours, targetCount, metrics, "broader");
 
             // Merge: existing pool first (preserves cluster/rank ordering), then broader.
             // The dedup on the merged list normalizes URL/title and keeps first occurrence.
@@ -272,16 +284,29 @@ public class ResearchPipelineService {
         return meaningful.isEmpty() ? topic.trim() : String.join(" ", meaningful);
     }
 
+    // E5: Check if a URL belongs to a blocked domain
+    private boolean isBlockedDomain(String url) {
+        if (url == null || url.isBlank() || blockedDomains == null || blockedDomains.isEmpty()) {
+            return false;
+        }
+        String normalized = deduplicationService != null ? deduplicationService.normalizeUrl(url) : null;
+        if (normalized == null || normalized.isBlank()) {
+            normalized = url;
+        }
+        String lowerNormalized = normalized.toLowerCase();
+        return blockedDomains.stream().anyMatch(domain -> lowerNormalized.contains(domain.trim().toLowerCase()));
+    }
+
     /**
-     * Generate a broader set of sub-queries for the fallback pass. The aim is to
-     * surface articles that the more specific 5 sub-queries may have missed.
+     * Generate a broader set of sub-queries for the fallback pass.
+     * F3: Guard against generating a query identical to any initial sub-query.
      */
-    private List<String> generateBroaderQueries(String topic) {
+    private List<String> generateBroaderQueries(String topic, List<String> initialSubQueries) {
         String cleaned = cleanTopic(topic);
         String baseTopic = !cleaned.isBlank() ? cleaned : topic.trim();
         LinkedHashSet<String> out = new LinkedHashSet<>();
-        out.add(baseTopic);
         String[] words = baseTopic.split("\\s+");
+
         if (words.length >= 3) {
             String firstTwo = words[0] + " " + words[1];
             if (!firstTwo.equalsIgnoreCase(baseTopic)) {
@@ -293,14 +318,29 @@ public class ResearchPipelineService {
                 out.add(words[0]);
             }
         }
+        // Fallback: add baseTopic only if it wasn't already an initial sub-query
+        if (out.isEmpty()) {
+            out.add(baseTopic);
+        }
+
+        // F3: Remove any broader query that duplicates an initial sub-query
+        if (initialSubQueries != null) {
+            out.removeIf(q -> initialSubQueries.stream().anyMatch(q::equalsIgnoreCase));
+        }
+
+        // If everything was filtered out, keep at least one fallback
+        if (out.isEmpty()) {
+            out.add(baseTopic + " latest");
+        }
+
         return new ArrayList<>(out);
     }
 
     /**
-     * Run a single pass of the search pipeline (search + freshness + sort + dedup +
+     * Run a single pass of the search pipeline (search + blocklist + freshness + sort + dedup +
      * fetch + final dedup) for a given list of sub-queries.
      */
-    private List<RawArticle> runSearchPass(List<String> subQueries, int maxAgeHours,
+    private List<RawArticle> runSearchPass(List<String> subQueries, int maxAgeHours, int targetCount,
                                            Map<String, Object> metrics, String passName) {
         Map<String, Integer> perSubQuery = new LinkedHashMap<>();
         List<RawArticle> rawList = new ArrayList<>();
@@ -323,23 +363,16 @@ public class ResearchPipelineService {
         metrics.put(passName + "_perSubQueryCounts", perSubQuery);
         metrics.put(passName + "_rawCandidates", rawList.size());
 
-        // Freshness filter
+        // E5: Blocklist filter
+        rawList.removeIf(a -> isBlockedDomain(a.getUrl()));
+
+        // Freshness filter — E2: null-date articles are kept
         Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
         int initialSize = rawList.size();
-        int droppedNullOrUnparseable = 0;
-        int droppedStale = 0;
-        for (RawArticle a : rawList) {
-            Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-            if (pub == null) {
-                droppedNullOrUnparseable++;
-            } else if (!pub.isAfter(cutoff)) {
-                droppedStale++;
-            }
-        }
         rawList = rawList.stream()
                 .filter(a -> {
                     Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-                    return pub != null && pub.isAfter(cutoff);
+                    return pub == null || pub.isAfter(cutoff);
                 })
                 .collect(Collectors.toList());
         metrics.put(passName + "_freshnessKept", rawList.size());
@@ -357,8 +390,8 @@ public class ResearchPipelineService {
         metrics.put(passName + "_afterPreFetchDedup", deduped.size());
         metrics.put(passName + "_preFetchDedupDropped", preDedup - deduped.size());
 
-        // Fetch with cap of 50
-        int fetchLimit = Math.min(deduped.size(), 50);
+        // F2: Dynamic fetch cap
+        int fetchLimit = Math.min(deduped.size(), Math.max(targetCount * 3, 20));
         List<RawArticle> fetched = new ArrayList<>();
         int tinyFish = 0, jina = 0, failed = 0;
         for (int i = 0; i < fetchLimit; i++) {
@@ -394,25 +427,27 @@ public class ResearchPipelineService {
         return finalPool;
     }
 
+    /**
+     * E1: Structurally diverse sub-query templates to surface different result sets.
+     * Replaces generic `{topic} news`, `{topic} 2026`, `{topic} analysis`, `{topic} report`
+     * which returned near-identical result sets from TinyFish.
+     */
     private List<String> generateSubQueries(String topic) {
         String trimmed = topic.trim();
         String cleaned = cleanTopic(trimmed);
-        String baseTopic = (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) ? cleaned : trimmed;
+        String base = (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) ? cleaned : trimmed;
 
         LinkedHashSet<String> queries = new LinkedHashSet<>();
-        // Include base topic & cleaned topic
         queries.add(trimmed);
-        if (!cleaned.isBlank()) {
+        // Only add cleaned form if meaningfully different
+        if (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) {
             queries.add(cleaned);
         }
-        // Generic "news" qualifier
-        queries.add(baseTopic + " news");
-        // Current-year anchor
-        String currentYear = String.valueOf(Year.now().getValue());
-        queries.add(baseTopic + " " + currentYear);
-        // Semantic qualifiers
-        queries.add(baseTopic + " analysis");
-        queries.add(baseTopic + " report");
+        // E1: Structurally diverse frames instead of generic suffixes
+        queries.add(base + " announcement OR launch");
+        queries.add(base + " impact OR implications");
+        queries.add(base + " research OR study");
+        queries.add(base + " funding OR acquisition");
         return new ArrayList<>(queries);
     }
 }

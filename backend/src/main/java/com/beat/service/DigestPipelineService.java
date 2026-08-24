@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class DigestPipelineService {
@@ -117,39 +116,15 @@ public class DigestPipelineService {
             log.info("[DIGEST_RUN #{}] STAGE 3 COMPLETED: Blurbs synthesized for {}/{} articles",
                     runId, synthesizeWithBlurb, synthesizeInput);
 
-            // 3.5 Phase 5: Fact-Checking / Verification Stage
-            log.info("[DIGEST_RUN #{}] STAGE 3.5: Starting Fact-Checking for {} articles...", runId, rankedArticles.size());
-            List<RawArticle> verifiedArticles = new ArrayList<>();
+            // 3.5 Phase 5: Fact-Checking / Verification Stage — L2: single batched Groq call
+            log.info("[DIGEST_RUN #{}] STAGE 3.5: Starting Batch Fact-Checking for {} articles (single Groq call)...", runId, rankedArticles.size());
             int originalCount = rankedArticles.size();
-            Map<String, Integer> rejectionReasonCounts = new LinkedHashMap<>();
-            for (int i = 0; i < rankedArticles.size(); i++) {
-                RawArticle article = rankedArticles.get(i);
-                LlmDigestService.VerificationResult verifyResult = llmDigestService.verifyAndRefine(article, article.getSummaryBlurb(), currentInstant);
-                if (verifyResult.isAccepted()) {
-                    article.setSummaryBlurb(verifyResult.getRefinedBlurb());
-                    verifiedArticles.add(article);
-                } else {
-                    String reason = verifyResult.getRejectionReason() != null ? verifyResult.getRejectionReason() : "unspecified";
-                    log.warn("[DIGEST_RUN #{}] Article rejected during fact-checking: '{}'. Reason: {}",
-                            runId, article.getTitle(), reason);
-                    rejectionReasonCounts.merge(reason, 1, Integer::sum);
-                }
-
-                // Rate-limit pause (1000ms throttle between sequential fact-check calls to prevent TPM bursting)
-                if (i < rankedArticles.size() - 1) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                }
-            }
+            List<RawArticle> verifiedArticles = llmDigestService.batchVerifyAndRefine(rankedArticles, currentInstant);
 
             int rejectedCount = originalCount - verifiedArticles.size();
             int acceptedCount = verifiedArticles.size();
-            log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected) rejectionReasons={}",
-                    runId, acceptedCount, originalCount, rejectedCount, rejectionReasonCounts);
+            log.info("[DIGEST_RUN #{}] STAGE 3.5 COMPLETED: {}/{} articles verified ({} rejected)",
+                    runId, acceptedCount, originalCount, rejectedCount);
 
             // Workflow.md Phase 5 step 5: "error budget" — if >50% of articles are
             // rejected, log an ERROR and surface it in digest_run.error_message. This
@@ -162,6 +137,7 @@ public class DigestPipelineService {
             }
 
             rankedArticles = verifiedArticles;
+
 
             // 4. Persist NewsItem entities for each ranked story
             log.info("[DIGEST_RUN #{}] STAGE 4: Persisting {} NewsItem entities to Neon database...", runId, rankedArticles.size());

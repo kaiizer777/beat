@@ -70,7 +70,13 @@ public class EmailService {
             Instant runTime = (digestRun != null && digestRun.getRunAt() != null) ? digestRun.getRunAt() : Instant.now();
             String formattedDate = dateFormatter.format(runTime);
             String channelName = channel != null && channel.getName() != null ? channel.getName() : "Daily Digest";
-            String subject = "Beat Digest: " + channelName + " — " + formattedDate;
+
+            // D4: Content-driven subject line with story count + top article teaser
+            String topTitle = (!newsItems.isEmpty() && newsItems.get(0).getTitle() != null)
+                    ? newsItems.get(0).getTitle() : "";
+            String teaser = topTitle.isBlank() ? ""
+                    : " — " + topTitle.substring(0, Math.min(60, topTitle.length()));
+            String subject = "Beat [" + channelName + "]: " + newsItems.size() + " stories" + teaser;
 
             String htmlBody = DigestHtmlTemplateBuilder.buildDigestHtml(channel, formattedDate, newsItems);
 

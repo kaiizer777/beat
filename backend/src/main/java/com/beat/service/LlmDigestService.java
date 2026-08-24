@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class LlmDigestService {
@@ -21,6 +22,15 @@ public class LlmDigestService {
 
     private final GroqClient groqClient;
     private final ObjectMapper objectMapper;
+
+    // L3: Tier-1 source credibility set for ranking signal
+    private static final Set<String> TIER1_SOURCES = Set.of(
+        "reuters", "associated press", "ap", "bloomberg", "the new york times", "nytimes",
+        "the washington post", "wsj", "wall street journal", "financial times", "ft",
+        "techcrunch", "the verge", "wired", "ars technica", "mit technology review",
+        "nature", "science", "bbc", "the guardian", "axios", "politico", "forbes",
+        "cnbc", "cnn", "the economist"
+    );
 
     public LlmDigestService(GroqClient groqClient, ObjectMapper objectMapper) {
         this.groqClient = groqClient;
@@ -49,8 +59,11 @@ public class LlmDigestService {
 
         for (int i = 0; i < candidates.size(); i++) {
             RawArticle article = candidates.get(i);
+            String publisher = article.getPublisher() != null ? article.getPublisher() : "Unknown";
+            // L3: Annotate tier-1 sources
+            String tierBadge = isTier1Source(publisher) ? " [Tier-1]" : "";
             userPrompt.append("[").append(i).append("] Title: ").append(article.getTitle()).append("\n");
-            userPrompt.append("    Source: ").append(article.getPublisher() != null ? article.getPublisher() : "Unknown").append("\n");
+            userPrompt.append("    Source: ").append(publisher).append(tierBadge).append("\n");
             userPrompt.append("    Snippet: ").append(article.getSnippet() != null ? article.getSnippet() : "").append("\n\n");
         }
 
@@ -67,8 +80,9 @@ public class LlmDigestService {
                 You are an expert news editor. Your job is to select and rank the top unique, high-quality news articles for a research digest topic.
                 1. Identify duplicate stories covering the exact same news event and pick the best single coverage source.
                 2. Rank the top unique articles by relevance and RECENCY. Penalize or discard articles that appear outdated relative to the Current Date.
-                3. You MUST select EXACTLY {targetCount} articles (unless there are fewer valid candidates available).
-                4. Respond ONLY with a valid JSON object matching this schema:
+                3. Prefer articles from [Tier-1] sources when quality is otherwise equal.
+                4. You MUST select EXACTLY {targetCount} articles (unless there are fewer valid candidates available).
+                5. Respond ONLY with a valid JSON object matching this schema:
                 {
                   "rankedIndices": {exampleIndices}
                 }
@@ -78,7 +92,8 @@ public class LlmDigestService {
                    .replace("{exampleIndices}", exampleIndices.toString());
 
         try {
-            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
+            // L5: cap output to 300 tokens for cluster/rank — only needs a short JSON array
+            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString(), 300);
             JsonNode root = objectMapper.readTree(jsonResult);
             JsonNode indicesNode = root.path("rankedIndices");
 
@@ -133,13 +148,14 @@ public class LlmDigestService {
             userPrompt.append("Article [").append(i).append("]:\n");
             userPrompt.append("Title: ").append(article.getTitle()).append("\n");
             userPrompt.append("Source: ").append(article.getPublisher() != null ? article.getPublisher() : "Unknown").append("\n");
-            
+
             String text = article.getFullText();
             if (text == null || text.isBlank()) {
                 text = article.getSnippet();
             }
-            if (text != null && text.length() > 700) {
-                text = text.substring(0, 700) + "...";
+            // L1: Raised from 700 → 3000 chars so the model sees ~500 words of real content
+            if (text != null && text.length() > 3000) {
+                text = text.substring(0, 3000) + "...";
             }
             userPrompt.append("Content: ").append(text != null ? text : "").append("\n\n");
         }
@@ -179,7 +195,9 @@ public class LlmDigestService {
                    .replace("{exampleBlurbs}", exampleBlurbs.toString());
 
         try {
-            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString());
+            // L5: cap synthesis output — 150 tokens/article × N articles + overhead
+            int maxTokens = Math.max(2500, rankedArticles.size() * 160);
+            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString(), maxTokens);
             JsonNode root = objectMapper.readTree(jsonResult);
             JsonNode blurbsNode = root.path("blurbs");
 
@@ -254,9 +272,9 @@ public class LlmDigestService {
     }
 
     /**
-     * Heuristic: a blurb is "short" if it has fewer than ~30 words OR fewer than 2 sentences.
-     * llama-3.3-70b-versatile occasionally under-emits in the 15-blurb batch call; this
-     * catches those cases so the safety-net re-call can fire.
+     * L4: Heuristic: a blurb is "short" if it has fewer than 40 words OR fewer than 2 sentences.
+     * Threshold raised from 30 → 40 so genuine 2-sentence technical blurbs (40-60 words) don't
+     * incorrectly bypass the safety net.
      */
     private boolean isShortBlurb(String blurb) {
         if (blurb == null || blurb.isBlank()) return true;
@@ -265,9 +283,9 @@ public class LlmDigestService {
         // Count sentences by terminal punctuation. A "good" blurb has at least 2.
         int sentences = trimmed.split("[.!?]+").length;
         if (sentences < 2) return true;
-        // Word count threshold. A 2-sentence blurb with 10 words isn't useful either.
+        // L4: Word count threshold raised 30 → 40.
         String[] words = trimmed.split("\\s+");
-        return words.length < 30;
+        return words.length < 40;
     }
 
     /**
@@ -281,8 +299,9 @@ public class LlmDigestService {
         if (text == null || text.isBlank()) {
             text = article.getSnippet();
         }
-        if (text != null && text.length() > 700) {
-            text = text.substring(0, 700) + "...";
+        // L1: Match the 3000-char limit used in synthesizeBlurbs
+        if (text != null && text.length() > 3000) {
+            text = text.substring(0, 3000) + "...";
         }
 
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
@@ -327,20 +346,105 @@ public class LlmDigestService {
     }
 
     /**
-     * Call 3: Fact-Check & Verify a generated blurb against the source text.
+     * L2: Batch fact-check — issues a SINGLE Groq call for all (source, blurb) pairs.
+     * This replaces 15 sequential per-article verifyAndRefine calls (one per article)
+     * which was exhausting the 100k TPD limit, leaving the last 4 articles unchecked.
      *
-     * <p>On a Groq API failure (network, 429, JSON parse error) we FALL BACK to the
-     * synthesized blurb rather than dropping the article. The synthesize stage
-     * already enforced the strict "100% derivative" rule with its own prompt, so
-     * the blurb is safe to keep. workflow.md Phase 5 step 3 only authorises a drop
-     * when the model returns {@code isValid=false AND refinedBlurb=null} — i.e. a
-     * real model rejection, not a transport failure. A transport failure must not
-     * be silently conflated with a model rejection; that was the dominant cause of
-     * under-delivery at higher targetCounts.</p>
+     * <p>The method mutates the input list's blurbs in-place (same pattern as synthesizeBlurbs)
+     * and returns the subset of articles that passed verification.</p>
      *
-     * @return VerificationResult with the (possibly refined) blurb on success, or a
-     *         rejectionReason on failure. Callers should check {@code isAccepted()}
-     *         to decide whether to keep the article in the digest.
+     * <p>On any transport/API failure the original blurbs are kept (same fallback policy as
+     * the original per-article verifyAndRefine).</p>
+     */
+    public List<RawArticle> batchVerifyAndRefine(List<RawArticle> articles, Instant currentInstant) {
+        if (articles == null || articles.isEmpty()) {
+            return List.of();
+        }
+
+        log.info("Executing Groq LLM Call 3 (Batch Fact-Check) for {} articles in a single call", articles.size());
+
+        String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
+
+        String systemPrompt = """
+                Current Date: {currentDate}. You are a strict fact-checker.
+                You will receive N (source_text, blurb) pairs. For each pair at index i:
+                - VALID: blurb contains only claims derivable from source_text (paraphrasing OK).
+                - INVALID: blurb contains numbers, statistics, named entities, or model versions absent from or contradicting the source.
+                Common journalistic framing ("growing role", "significant implications", "raising concerns") is always VALID.
+                If INVALID and fixable, provide refinedBlurb. Otherwise set refinedBlurb to null.
+
+                Respond ONLY with valid JSON:
+                {"results": [{"isValid": true, "refinedBlurb": "..." or null}, ...]}
+                The array length MUST equal the number of items sent.
+                """.replace("{currentDate}", currentDate);
+
+        StringBuilder userPrompt = new StringBuilder();
+        for (int i = 0; i < articles.size(); i++) {
+            RawArticle article = articles.get(i);
+            String text = article.getFullText();
+            if (text == null || text.isBlank()) {
+                text = article.getSnippet();
+            }
+            // L2/L1: 4000-char source window so claims are actually verifiable
+            if (text != null && text.length() > 4000) {
+                text = text.substring(0, 4000) + "...";
+            }
+            userPrompt.append("Item [").append(i).append("]:\n");
+            userPrompt.append("Source: ").append(text != null ? text : "").append("\n");
+            userPrompt.append("Blurb: ").append(article.getSummaryBlurb() != null ? article.getSummaryBlurb() : "").append("\n\n");
+        }
+
+        try {
+            // L5: cap output — each result is a short JSON object, ~50 tokens × N + overhead
+            int maxTokens = Math.max(500, articles.size() * 60);
+            String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString(), maxTokens);
+            JsonNode root = objectMapper.readTree(jsonResult);
+            JsonNode resultsNode = root.path("results");
+
+            if (!resultsNode.isArray() || resultsNode.size() != articles.size()) {
+                log.warn("Batch fact-check: response array size mismatch (expected={}, got={}). Accepting all blurbs as-is.",
+                        articles.size(), resultsNode.size());
+                return new ArrayList<>(articles);
+            }
+
+            List<RawArticle> accepted = new ArrayList<>();
+            for (int i = 0; i < articles.size(); i++) {
+                RawArticle article = articles.get(i);
+                JsonNode result = resultsNode.get(i);
+                boolean isValid = result.path("isValid").asBoolean(true);
+                JsonNode refinedNode = result.path("refinedBlurb");
+                String refinedBlurb = (refinedNode.isNull() || refinedNode.isMissingNode()) ? null : refinedNode.asText();
+
+                if (refinedBlurb != null && !refinedBlurb.isBlank()) {
+                    // LLM provided a fix — use it
+                    article.setSummaryBlurb(refinedBlurb.trim());
+                    accepted.add(article);
+                    log.debug("Batch fact-check: article [{}] refined by LLM: '{}'", i, article.getTitle());
+                } else if (isValid) {
+                    // LLM says valid, original blurb stands
+                    accepted.add(article);
+                } else {
+                    // isValid=false and no refinedBlurb — genuine model rejection
+                    String reason = result.path("rejectionReason").asText("unspecified");
+                    log.warn("Batch fact-check: article [{}] rejected. Title='{}', Reason={}",
+                            i, article.getTitle(), reason);
+                }
+            }
+
+            log.info("Groq Call 3 (Batch Fact-Check) completed: {}/{} articles accepted", accepted.size(), articles.size());
+            return accepted;
+
+        } catch (Exception e) {
+            // Transport / API / JSON-parse failure — fall back to all articles with original blurbs
+            log.warn("Groq Call 3 (Batch Fact-Check) failed ({}). Falling back to all synthesized blurbs.", e.getMessage());
+            return new ArrayList<>(articles);
+        }
+    }
+
+    /**
+     * Call 3 (single-article): Fact-Check & Verify a generated blurb against the source text.
+     * Kept for backward compat / single-article callers. DigestPipelineService uses
+     * batchVerifyAndRefine instead.
      */
     public VerificationResult verifyAndRefine(RawArticle article, String generatedBlurb, Instant currentInstant) {
         log.info("Executing Groq LLM Call 3 (Fact-Check) for article: '{}'", article.getTitle());
@@ -352,8 +456,9 @@ public class LlmDigestService {
         if (text == null || text.isBlank()) {
             text = article.getSnippet();
         }
-        if (text != null && text.length() > 2000) {
-            text = text.substring(0, 2000) + "...";
+        // L1: Raised from 2000 → 4000 chars so claims are actually verifiable
+        if (text != null && text.length() > 4000) {
+            text = text.substring(0, 4000) + "...";
         }
 
         StringBuilder userPrompt = new StringBuilder();
@@ -421,6 +526,15 @@ public class LlmDigestService {
                     article.getTitle(), e.getMessage());
             return VerificationResult.accepted(generatedBlurb);
         }
+    }
+
+    /**
+     * L3: Check if a publisher is a tier-1 credibility source.
+     */
+    private boolean isTier1Source(String publisher) {
+        if (publisher == null || publisher.isBlank()) return false;
+        String lower = publisher.toLowerCase();
+        return TIER1_SOURCES.stream().anyMatch(lower::contains);
     }
 
     /**

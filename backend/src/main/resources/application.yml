@@ -58,3 +58,5 @@ internal:
 digest:
   freshness:
     max-age-hours: 168
+  source:
+    blocked-domains: slideshare.net,pinterest.com,quora.com,reddit.com,facebook.com

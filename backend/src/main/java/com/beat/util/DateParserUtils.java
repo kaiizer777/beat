@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 
 public class DateParserUtils {
 
-    private static final Pattern RELATIVE_TIME_PATTERN = Pattern.compile("(?i)(\\d+)\\s+(minute|minutes|min|mins|hour|hours|hr|hrs|day|days)\\s+ago");
+    private static final Pattern RELATIVE_TIME_PATTERN = Pattern.compile("(?i)(\\d+)\\s+(minute|minutes|min|mins|hour|hours|hr|hrs|day|days|week|weeks|wk|wks|month|months)\\s+ago");
     private static final Pattern YESTERDAY_PATTERN = Pattern.compile("(?i)yesterday");
 
     private static final List<DateTimeFormatter> FORMATTERS = Arrays.asList(
@@ -71,6 +71,12 @@ public class DateParserUtils {
                     unit = ChronoUnit.HOURS;
                 } else if (unitStr.startsWith("day")) {
                     unit = ChronoUnit.DAYS;
+                } else if (unitStr.startsWith("w")) {
+                    // weeks → convert to days
+                    return Instant.now().minus(amount * 7L, ChronoUnit.DAYS);
+                } else if (unitStr.startsWith("month")) {
+                    // months → approximate as 30 days
+                    return Instant.now().minus(amount * 30L, ChronoUnit.DAYS);
                 } else {
                     return null;
                 }

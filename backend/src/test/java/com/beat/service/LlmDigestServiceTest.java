@@ -15,6 +15,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -125,8 +126,11 @@ public class LlmDigestServiceTest {
 
     @Test
     void synthesizeBlurbs_truncatesSourceTextAndSetsBlurbs() throws Exception {
-        when(groqClient.generateJsonResponse(anyString(), anyString()))
-                .thenReturn("{\"blurbs\": [\"Sentence one about the model. Sentence two why it matters to developers and engineers.\"]}");
+        // L4: blurb must have >= 40 words and >= 2 sentences to avoid isShortBlurb triggering
+        // the expand safety net. L5: synthesizeBlurbs now calls the 3-arg overload with maxTokens.
+        String fullBlurb = "The new large language model represents a significant leap forward in natural language processing capabilities for enterprise applications. This development matters because it demonstrates how open-source research teams can compete with well-funded commercial labs on benchmark performance while maintaining transparent training methodologies and data practices.";
+        when(groqClient.generateJsonResponse(anyString(), anyString(), anyInt()))
+                .thenReturn("{\"blurbs\": [\"" + fullBlurb + "\"]}");
 
         String longContent = "A".repeat(1200);
         RawArticle article = new RawArticle(
@@ -135,6 +139,6 @@ public class LlmDigestServiceTest {
 
         service.synthesizeBlurbs(List.of(article), "ai models", Instant.now());
 
-        assertEquals("Sentence one about the model. Sentence two why it matters to developers and engineers.", article.getSummaryBlurb());
+        assertEquals(fullBlurb, article.getSummaryBlurb());
     }
 }
