@@ -65,6 +65,21 @@ public class ArticleDeduplicationService {
             if (path.endsWith("/")) {
                 path = path.substring(0, path.length() - 1);
             }
+            String query = uri.getRawQuery();
+            if (query != null && !query.isBlank()) {
+                String[] params = query.split("&");
+                List<String> meaningfulParams = new ArrayList<>();
+                for (String p : params) {
+                    String lower = p.toLowerCase(Locale.ENGLISH);
+                    if (!lower.startsWith("utm_") && !lower.startsWith("fbclid") && !lower.startsWith("gclid") && !lower.startsWith("ref=")) {
+                        meaningfulParams.add(p);
+                    }
+                }
+                if (!meaningfulParams.isEmpty()) {
+                    Collections.sort(meaningfulParams);
+                    return host + path + "?" + String.join("&", meaningfulParams);
+                }
+            }
             return host + path;
         } catch (Exception e) {
             return rawUrl.trim().toLowerCase();

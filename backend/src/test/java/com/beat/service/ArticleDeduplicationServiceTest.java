@@ -28,6 +28,15 @@ class ArticleDeduplicationServiceTest {
     }
 
     @Test
+    void deduplicate_preservesDistinctQueryBasedUrls() {
+        RawArticle g1 = new RawArticle("Alpha Model Released", "https://www.google.com/goto?url=CAES111", "snippet 1", "pub", "2026-08-28T00:00:00Z", null, null);
+        RawArticle g2 = new RawArticle("Beta Framework Announced", "https://www.google.com/goto?url=CAES222", "snippet 2", "pub", "2026-08-28T00:00:00Z", null, null);
+
+        List<RawArticle> result = deduplicationService.deduplicate(List.of(g1, g2));
+        assertEquals(2, result.size());
+    }
+
+    @Test
     void deduplicate_dropsNearDuplicateTitlesWithCosineSimilarityAboveThreshold() {
         // Very similar titles (cosine similarity > 0.85)
         RawArticle a1 = new RawArticle("OpenAI announces GPT 5 reasoning model release", "https://example.com/1", "snippet", "pub", null, null, null);
