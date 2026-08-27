@@ -53,7 +53,7 @@ All secret keys and credentials are set as environment variables on the backend 
 | `RESEND_API_KEY` | Resend email sending key |
 | `RESEND_FROM_EMAIL` | Sender address (e.g., `onboarding@resend.dev`) |
 | `AUTH_SECRET` | Secret used to validate JWTs from frontend |
-| `INTERNAL_CRON_SECRET` | Shared secret for GitHub Actions cron trigger |
+| `INTERNAL_SECRET` | Shared secret for GitHub Actions cron trigger |
 
 **Frontend (Vercel / Local):**
 | Key Variable | Purpose |
@@ -84,7 +84,7 @@ This stack is designed to run 100% on free tiers without requiring a credit card
 
 1. **Backend (Render)**: Deploy the Spring Boot application as a Web Service on Render's free tier. Add all backend environment variables.
 2. **Frontend (Vercel)**: Connect your GitHub repository to Vercel and deploy the `frontend` folder. Add all frontend environment variables.
-3. **Cron (GitHub Actions)**: Add the `INTERNAL_CRON_SECRET` to your GitHub repo secrets. The `.github/workflows/run-digests.yml` file will automatically hit your Render backend every 5 minutes.
+3. **Cron (GitHub Actions)**: Add the `INTERNAL_SECRET` to your GitHub repo secrets. The `.github/workflows/run-digests.yml` file will automatically hit your Render backend every 5 minutes. Ensure GitHub Actions is enabled for the repository — scheduled workflows are automatically disabled after 60 days of repository inactivity and must be re-enabled manually.
 
 ---
 

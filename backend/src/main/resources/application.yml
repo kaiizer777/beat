@@ -53,7 +53,7 @@ auth:
   secret: ${AUTH_SECRET}
 
 internal:
-  secret: ${INTERNAL_SECRET:default_internal_secret_key}
+  secret: ${INTERNAL_SECRET:}
 
 digest:
   freshness:

@@ -5,13 +5,20 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   run-due-channels:
     runs-on: ubuntu-latest
+    concurrency:
+      group: poll-due-channels
+      cancel-in-progress: false
+    timeout-minutes: 2
     steps:
       - name: Trigger due channels endpoint
         run: |
-          curl -X POST https://beat-fuvv.onrender.com/api/internal/run-due-channels \
+          curl -X POST https://beat-fuvv.onrender.com/api/internal/run-due-channels \ # TODO: move to vars.BACKEND_URL
             -H "X-Internal-Secret: ${{ secrets.INTERNAL_SECRET }}" \
             -H "Content-Type: application/json" \
-            --fail --silent --show-error
+            --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors --connect-timeout 15 --max-time 60

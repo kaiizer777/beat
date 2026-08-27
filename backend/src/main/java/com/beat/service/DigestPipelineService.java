@@ -198,8 +198,13 @@ public class DigestPipelineService {
             }
             digestRun.setEmailSent(emailSent);
 
-            // 6. Update DigestRun status to SUCCESS
-            digestRun.setStatus(DigestRunStatus.SUCCESS);
+            // 6. Update DigestRun status — fail if all articles were rejected by fact-check
+            if (newsItems.isEmpty() && originalCount > 0) {
+                digestRun.setStatus(DigestRunStatus.FAILED);
+                digestRun.setErrorMessage("All articles rejected by fact-check (Groq TPD limit?)");
+            } else {
+                digestRun.setStatus(DigestRunStatus.SUCCESS);
+            }
             digestRun = digestRunRepository.save(digestRun);
 
             long duration = System.currentTimeMillis() - startTime;

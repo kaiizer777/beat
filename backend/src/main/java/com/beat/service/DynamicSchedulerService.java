@@ -123,6 +123,8 @@ public class DynamicSchedulerService {
         boolean isPastScheduled = !timeSinceScheduled.isNegative();
 
         // Overlap protection: check if channel has already run on or after the scheduled instance
+        // lastRunAt is only advanced after successful pipeline execution (see executeChannelPipeline),
+        // so a failed run will remain due on next evaluation and be retried.
         Instant lastRunAt = channel.getLastRunAt();
         boolean alreadyRan = (lastRunAt != null) && !lastRunAt.isBefore(mostRecentScheduled);
 
@@ -142,11 +144,11 @@ public class DynamicSchedulerService {
                 return;
             }
 
-            channel.setLastRunAt(Instant.now());
-            channelRepository.save(channel);
-
             log.info("Trigger fired for Channel ID: {} ('{}'). Executing digest pipeline.", channel.getId(), channel.getName());
             digestPipelineService.executeDigestPipeline(channel);
+            // Only advance lastRunAt after successful pipeline execution so isDue() can retry on failure
+            channel.setLastRunAt(Instant.now());
+            channelRepository.save(channel);
         } catch (Exception e) {
             log.error("Error executing digest pipeline for Channel ID {}: {}", channelId, e.getMessage(), e);
         } finally {
