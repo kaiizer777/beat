@@ -120,43 +120,7 @@ public class ResearchPipelineService {
         }
         metrics.put("blocklistDropped", blocklistDropped);
 
-        // Phase 2: Freshness Filter
-        Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
-        int initialSize = rawCandidateList.size();
-
-        int droppedNullOrUnparseable = 0;
-        int droppedStale = 0;
-        for (RawArticle a : rawCandidateList) {
-            Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-            if (pub == null) {
-                droppedNullOrUnparseable++;
-            } else if (!pub.isAfter(cutoff)) {
-                droppedStale++;
-            }
-        }
-
-        // E2: null-date articles are kept (TinyFish news API implies recency)
-        rawCandidateList = rawCandidateList.stream()
-                .filter(a -> {
-                    Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-                    return pub == null || pub.isAfter(cutoff);
-                })
-                .collect(Collectors.toList());
-        int dropped = initialSize - rawCandidateList.size();
-        log.info("Freshness filter: kept {} / dropped {} (nullKept={}, staleDropped={})",
-                rawCandidateList.size(), dropped, droppedNullOrUnparseable, droppedStale);
-        metrics.put("freshnessKept", rawCandidateList.size());
-        metrics.put("freshnessDroppedTotal", dropped);
-        metrics.put("freshnessKeptNullDate", droppedNullOrUnparseable);
-        metrics.put("freshnessDroppedStale", droppedStale);
-
-        // Phase 3: Pre-Deduplication Sort by Date (newest first, null-date goes last)
-        rawCandidateList.sort(Comparator.comparing(
-                (RawArticle a) -> com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt()),
-                Comparator.nullsLast(Comparator.reverseOrder())
-        ));
-
-        // 3. Early deduplication pass on raw candidates before fetching full text
+        // Early deduplication pass on raw candidates before freshness filter
         int preDedupSize = rawCandidateList.size();
         List<RawArticle> deduplicatedCandidates = deduplicationService.deduplicate(rawCandidateList);
         log.info("Candidate pool size after initial deduplication: {} (dropped {})",
@@ -164,8 +128,51 @@ public class ResearchPipelineService {
         metrics.put("afterPreFetchDedup", deduplicatedCandidates.size());
         metrics.put("preFetchDedupDropped", preDedupSize - deduplicatedCandidates.size());
 
-        // F2: Dynamic fetch cap — 3x headroom, min 20, max 60
-        int fetchLimit = Math.min(deduplicatedCandidates.size(), Math.max(targetCount * 3, 20));
+        // Freshness Dynamic Window: expand window if candidate pool is starving (< targetCount * 2)
+        int candidateCount = deduplicatedCandidates.size();
+        int freshnessWindowDays = maxAgeHours > 0 ? (maxAgeHours / 24) : 7;
+        int dynamicWindowDays = freshnessWindowDays;
+        if (targetCount > 0 && candidateCount < targetCount * 2) {
+            dynamicWindowDays = Math.max(freshnessWindowDays, 14);
+            log.info("Expanding freshness window to {}d due to starvation (candidates={} < {})",
+                    dynamicWindowDays, candidateCount, targetCount * 2);
+        }
+        int effectiveMaxAgeHours = dynamicWindowDays * 24;
+        Instant cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
+
+        int initialFreshnessSize = deduplicatedCandidates.size();
+        int droppedNullOrUnparseable = 0;
+        int droppedStale = 0;
+        List<RawArticle> freshCandidates = new ArrayList<>();
+        for (RawArticle a : deduplicatedCandidates) {
+            Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+            if (pub == null) {
+                droppedNullOrUnparseable++;
+                freshCandidates.add(a);
+            } else if (pub.isAfter(cutoff)) {
+                freshCandidates.add(a);
+            } else {
+                droppedStale++;
+            }
+        }
+        int dropped = initialFreshnessSize - freshCandidates.size();
+        log.info("Freshness filter: kept {} / dropped {} (nullKept={}, staleDropped={})",
+                freshCandidates.size(), dropped, droppedNullOrUnparseable, droppedStale);
+        metrics.put("freshnessKept", freshCandidates.size());
+        metrics.put("freshnessDroppedTotal", dropped);
+        metrics.put("freshnessKeptNullDate", droppedNullOrUnparseable);
+        metrics.put("freshnessDroppedStale", droppedStale);
+
+        // Sort: newest first, null-date intermixed mid-list if content heuristic passes
+        freshCandidates.sort(Comparator.comparing(
+                (RawArticle a) -> resolveEffectiveDate(a, effectiveMaxAgeHours),
+                Comparator.nullsLast(Comparator.reverseOrder())
+        ).thenComparing(Comparator.comparingInt(this::getContentLength).reversed()));
+
+        deduplicatedCandidates = freshCandidates;
+
+        // F2: Dynamic fetch cap — 4x headroom, min 30
+        int fetchLimit = Math.min(deduplicatedCandidates.size(), Math.max(targetCount * 4, 30));
         List<RawArticle> fetchedArticles = new ArrayList<>();
 
         // 4. Fetch full text for candidates using TinyFish Fetch + Jina fallback
@@ -366,36 +373,47 @@ public class ResearchPipelineService {
         // E5: Blocklist filter
         rawList.removeIf(a -> isBlockedDomain(a.getUrl()));
 
-        // Freshness filter — E2: null-date articles are kept
-        Instant cutoff = Instant.now().minus(maxAgeHours, ChronoUnit.HOURS);
-        int initialSize = rawList.size();
-        rawList = rawList.stream()
-                .filter(a -> {
-                    Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-                    return pub == null || pub.isAfter(cutoff);
-                })
-                .collect(Collectors.toList());
-        metrics.put(passName + "_freshnessKept", rawList.size());
-        metrics.put(passName + "_freshnessDroppedTotal", initialSize - rawList.size());
-
-        // Sort newest-first (consistency with main pass)
-        rawList.sort(Comparator.comparing(
-                (RawArticle a) -> com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt()),
-                Comparator.nullsLast(Comparator.reverseOrder())
-        ));
-
         // Pre-fetch dedup
         int preDedup = rawList.size();
         List<RawArticle> deduped = deduplicationService.deduplicate(rawList);
         metrics.put(passName + "_afterPreFetchDedup", deduped.size());
         metrics.put(passName + "_preFetchDedupDropped", preDedup - deduped.size());
 
-        // F2: Dynamic fetch cap
-        int fetchLimit = Math.min(deduped.size(), Math.max(targetCount * 3, 20));
+        // Dynamic freshness window
+        int candidateCount = deduped.size();
+        int freshnessWindowDays = maxAgeHours > 0 ? (maxAgeHours / 24) : 7;
+        int dynamicWindowDays = freshnessWindowDays;
+        if (targetCount > 0 && candidateCount < targetCount * 2) {
+            dynamicWindowDays = Math.max(freshnessWindowDays, 14);
+            log.info("Expanding freshness window to {}d due to starvation in {} pass (candidates={} < {})",
+                    dynamicWindowDays, passName, candidateCount, targetCount * 2);
+        }
+        int effectiveMaxAgeHours = dynamicWindowDays * 24;
+        Instant cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
+
+        int beforeFreshness = deduped.size();
+        List<RawArticle> freshDeduped = new ArrayList<>();
+        for (RawArticle a : deduped) {
+            Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+            if (pub == null || pub.isAfter(cutoff)) {
+                freshDeduped.add(a);
+            }
+        }
+        metrics.put(passName + "_freshnessKept", freshDeduped.size());
+        metrics.put(passName + "_freshnessDroppedTotal", beforeFreshness - freshDeduped.size());
+
+        // Sort newest-first, intermix null-date mid-list if content heuristic passes
+        freshDeduped.sort(Comparator.comparing(
+                (RawArticle a) -> resolveEffectiveDate(a, effectiveMaxAgeHours),
+                Comparator.nullsLast(Comparator.reverseOrder())
+        ).thenComparing(Comparator.comparingInt(this::getContentLength).reversed()));
+
+        // F2: Dynamic fetch cap — 4x headroom, min 30
+        int fetchLimit = Math.min(freshDeduped.size(), Math.max(targetCount * 4, 30));
         List<RawArticle> fetched = new ArrayList<>();
         int tinyFish = 0, jina = 0, failed = 0;
         for (int i = 0; i < fetchLimit; i++) {
-            RawArticle c = deduped.get(i);
+            RawArticle c = freshDeduped.get(i);
             TinyFishFetchClient.FetchResult fr = fetchClient.fetchContent(c.getUrl());
             if (fr != null && fr.getContent() != null && !fr.getContent().isBlank()) {
                 c.setFullText(fr.getContent());
@@ -428,26 +446,47 @@ public class ResearchPipelineService {
     }
 
     /**
-     * E1: Structurally diverse sub-query templates to surface different result sets.
-     * Replaces generic `{topic} news`, `{topic} 2026`, `{topic} analysis`, `{topic} report`
-     * which returned near-identical result sets from TinyFish.
+     * Topic-derived orthogonal sub-queries across 5 distinct intents:
+     * [topic, topic+" latest news", topic+" research paper", topic+" market analysis", topic+" technical deep dive"]
      */
-    private List<String> generateSubQueries(String topic) {
-        String trimmed = topic.trim();
-        String cleaned = cleanTopic(trimmed);
-        String base = (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) ? cleaned : trimmed;
-
-        LinkedHashSet<String> queries = new LinkedHashSet<>();
-        queries.add(trimmed);
-        // Only add cleaned form if meaningfully different
-        if (!cleaned.isBlank() && !cleaned.equalsIgnoreCase(trimmed)) {
-            queries.add(cleaned);
+    List<String> generateSubQueries(String topic) {
+        if (topic == null || topic.isBlank()) {
+            return List.of();
         }
-        // E1: Structurally diverse frames instead of generic suffixes
-        queries.add(base + " announcement OR launch");
-        queries.add(base + " impact OR implications");
-        queries.add(base + " research OR study");
-        queries.add(base + " funding OR acquisition");
-        return new ArrayList<>(queries);
+        String trimmed = topic.trim();
+        List<String> queries = new ArrayList<>(5);
+        queries.add(trimmed);
+        queries.add(trimmed + " latest news");
+        queries.add(trimmed + " research paper");
+        queries.add(trimmed + " market analysis");
+        queries.add(trimmed + " technical deep dive");
+        return queries;
+    }
+
+    private Instant resolveEffectiveDate(RawArticle a, int effectiveMaxAgeHours) {
+        if (a == null) return null;
+        Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+        if (pub != null) {
+            return pub;
+        }
+        if (hasContentLengthHeuristic(a)) {
+            return Instant.now().minus(effectiveMaxAgeHours / 2, ChronoUnit.HOURS);
+        }
+        return null;
+    }
+
+    private boolean hasContentLengthHeuristic(RawArticle a) {
+        if (a == null) return false;
+        if (a.getFullText() != null && a.getFullText().length() > 500) {
+            return true;
+        }
+        return a.getSnippet() != null && !a.getSnippet().isBlank();
+    }
+
+    private int getContentLength(RawArticle a) {
+        if (a == null) return 0;
+        if (a.getFullText() != null) return a.getFullText().length();
+        if (a.getSnippet() != null) return a.getSnippet().length();
+        return 0;
     }
 }
