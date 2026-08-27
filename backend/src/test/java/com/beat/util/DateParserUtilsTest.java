@@ -72,6 +72,24 @@ class DateParserUtilsTest {
     }
 
     @Test
+    void testParseYearlessMonthDay() {
+        String yearlessDate = "Aug 25";
+        Instant result = DateParserUtils.parseInstantOrNull(yearlessDate);
+        assertNotNull(result);
+        int currentYear = java.time.Year.now().getValue();
+        assertEquals(Instant.parse(currentYear + "-08-25T00:00:00Z"), result);
+    }
+
+    @Test
+    void testParseYearlessSingleDigitDay() {
+        String yearlessDate = "Aug 5";
+        Instant result = DateParserUtils.parseInstantOrNull(yearlessDate);
+        assertNotNull(result);
+        int currentYear = java.time.Year.now().getValue();
+        assertEquals(Instant.parse(currentYear + "-08-05T00:00:00Z"), result);
+    }
+
+    @Test
     void testParseInvalidFormat() {
         assertNull(DateParserUtils.parseInstantOrNull("Unknown date format"));
         assertNull(DateParserUtils.parseInstantOrNull("next week"));

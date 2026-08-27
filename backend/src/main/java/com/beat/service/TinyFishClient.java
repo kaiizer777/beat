@@ -50,6 +50,8 @@ public class TinyFishClient {
                 .queryParam("max_results", "30")
                 .queryParam("limit", "30")
                 .queryParam("num", "30")
+                .queryParam("sort_by", "date")
+                .queryParam("time_range", "week")
                 .build().encode().toUri();
 
         HttpHeaders headers = new HttpHeaders();

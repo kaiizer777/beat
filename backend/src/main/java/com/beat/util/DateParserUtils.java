@@ -3,9 +3,12 @@ package com.beat.util;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Year;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +28,17 @@ public class DateParserUtils {
             DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MM-dd-yyyy", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH)
+            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH),
+            new DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("MMM d")
+                    .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
+                    .toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("MMM dd")
+                    .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
+                    .toFormatter(Locale.ENGLISH)
     );
 
     public static Instant parseInstantOrNull(String rawDate) {

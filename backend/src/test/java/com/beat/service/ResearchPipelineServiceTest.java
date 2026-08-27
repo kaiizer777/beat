@@ -131,7 +131,7 @@ public class ResearchPipelineServiceTest {
     }
 
     @Test
-    void executeResearch_nullDateIntermixedMidListAheadOfOlderArticles() {
+    void executeResearch_nullDateSortedNullsLastBehindDatedArticles() {
         TinyFishClient.SearchResultItem newest = new TinyFishClient.SearchResultItem("Newest 1d", "http://1d.com", "snippet", "publisher", Instant.now().minus(24, ChronoUnit.HOURS).toString());
         TinyFishClient.SearchResultItem older = new TinyFishClient.SearchResultItem("Older 20d", "http://20d.com", "snippet", "publisher", Instant.now().minus(480, ChronoUnit.HOURS).toString());
         TinyFishClient.SearchResultItem nullDate = new TinyFishClient.SearchResultItem("Null Date", "http://null.com", "meaningful snippet text", "publisher", null);
@@ -147,14 +147,13 @@ public class ResearchPipelineServiceTest {
         when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
 
         // targetCount = 15, starvation expands window to 30d (720h).
-        // Midpoint of 720h is 360h (15 days).
-        // Order should be: Newest 1d (24h) -> Null Date (~360h midpoint) -> Older 20d (480h).
+        // Order should be: Newest 1d (24h) -> Older 20d (480h) -> Null Date (nulls-last).
         List<RawArticle> pool = researchPipelineService.executeResearch("tech", 168, 15).getArticles();
 
         assertEquals(3, pool.size());
         assertEquals("Newest 1d", pool.get(0).getTitle());
-        assertEquals("Null Date", pool.get(1).getTitle());
-        assertEquals("Older 20d", pool.get(2).getTitle());
+        assertEquals("Older 20d", pool.get(1).getTitle());
+        assertEquals("Null Date", pool.get(2).getTitle());
     }
 
     @Test
@@ -183,5 +182,67 @@ public class ResearchPipelineServiceTest {
         List<RawArticle> pool = researchPipelineService.executeResearch("niche ai", 168, 15).getArticles();
 
         assertEquals(35, pool.size());
+    }
+
+    @Test
+    void executeResearch_yearlessDatesParsedAndSortedNewestFirstAheadOfNullDates() {
+        TinyFishClient.SearchResultItem aug28 = new TinyFishClient.SearchResultItem("Aug 28 Article", "http://aug28.com", "snippet", "publisher", "2026-08-28T00:00:00Z");
+        TinyFishClient.SearchResultItem aug25 = new TinyFishClient.SearchResultItem("Aug 25 Article", "http://aug25.com", "snippet", "publisher", "Aug 25");
+        TinyFishClient.SearchResultItem nullDate = new TinyFishClient.SearchResultItem("Null Date Article", "http://null.com", "snippet", "publisher", null);
+
+        when(tinyFishClient.searchNews(anyString())).thenAnswer(invocation -> {
+            String query = invocation.getArgument(0);
+            if (query.equals("recency test")) {
+                return List.of(aug25, nullDate, aug28);
+            }
+            return List.of();
+        });
+        when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
+
+        List<RawArticle> pool = researchPipelineService.executeResearch("recency test", 168, 0).getArticles();
+
+        assertEquals(3, pool.size());
+        assertEquals("Aug 28 Article", pool.get(0).getTitle());
+        assertEquals("Aug 25 Article", pool.get(1).getTitle());
+        assertEquals("Null Date Article", pool.get(2).getTitle());
+    }
+
+    @Test
+    void executeResearch_aiCodingAgentNews_starvationWindowExpandsAndTopSortedByAug28First() {
+        List<TinyFishClient.SearchResultItem> items = new java.util.ArrayList<>();
+        items.add(new TinyFishClient.SearchResultItem("Aug 28 Story 1", "http://aug28-1.com", "snippet", "TechCrunch", "2026-08-28T01:00:00Z"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 28 Story 2", "http://aug28-2.com", "snippet", "VentureBeat", "Aug 28"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 27 Story 1", "http://aug27-1.com", "snippet", "Reuters", "2026-08-27T10:00:00Z"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 25 Story 1", "http://aug25-1.com", "snippet", "Wired", "Aug 25"));
+
+        for (int i = 1; i <= 10; i++) {
+            items.add(new TinyFishClient.SearchResultItem("Older Day " + (10 + i), "http://older" + i + ".com", "snippet", "Pub",
+                    Instant.now().minus(240 + i * 24, ChronoUnit.HOURS).toString()));
+        }
+        items.add(new TinyFishClient.SearchResultItem("Null Date Story", "http://nullstory.com", "snippet", "Pub", null));
+
+        when(tinyFishClient.searchNews(anyString())).thenAnswer(invocation -> {
+            String query = invocation.getArgument(0);
+            if (query.equals("ai coding agent news")) {
+                return items;
+            }
+            return List.of();
+        });
+        when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
+
+        ResearchResult result = researchPipelineService.executeResearch("ai coding agent news", 168, 15);
+        List<RawArticle> pool = result.getArticles();
+        java.util.Map<String, Object> metrics = result.getMetrics();
+
+        int freshKept = (Integer) metrics.get("freshnessKept");
+        assertTrue(freshKept >= 12, "fresh after 30d must be 12+, was: " + freshKept);
+
+        assertEquals("Aug 28 Story 1", pool.get(0).getTitle());
+        assertEquals("Aug 28 Story 2", pool.get(1).getTitle());
+        assertEquals("Aug 27 Story 1", pool.get(2).getTitle());
+        assertEquals("Aug 25 Story 1", pool.get(3).getTitle());
+        assertEquals("Null Date Story", pool.get(pool.size() - 1).getTitle());
     }
 }

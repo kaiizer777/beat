@@ -1,6 +1,7 @@
 package com.beat.service;
 
 import com.beat.dto.RawArticle;
+import com.beat.util.DateParserUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -62,9 +64,22 @@ public class LlmDigestService {
             String publisher = article.getPublisher() != null ? article.getPublisher() : "Unknown";
             // L3: Annotate tier-1 sources
             String tierBadge = isTier1Source(publisher) ? " [Tier-1]" : "";
-            userPrompt.append("[").append(i).append("] Title: ").append(article.getTitle()).append("\n");
-            userPrompt.append("    Source: ").append(publisher).append(tierBadge).append("\n");
-            userPrompt.append("    Snippet: ").append(article.getSnippet() != null ? article.getSnippet() : "").append("\n\n");
+
+            String publishedAt = "Unknown";
+            if (article.getPublishedAt() != null && !article.getPublishedAt().isBlank()) {
+                Instant parsed = DateParserUtils.parseInstantOrNull(article.getPublishedAt());
+                if (parsed != null) {
+                    publishedAt = DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH).format(parsed.atZone(ZoneOffset.UTC));
+                } else {
+                    publishedAt = article.getPublishedAt();
+                }
+            }
+
+            userPrompt.append("[").append(i).append("] Date: ").append(publishedAt)
+                    .append(" | Title: ").append(article.getTitle())
+                    .append(" | Snippet: ").append(article.getSnippet() != null ? article.getSnippet() : "")
+                    .append("\n");
+            userPrompt.append("    Source: ").append(publisher).append(tierBadge).append("\n\n");
         }
 
         StringBuilder exampleIndices = new StringBuilder("[");
@@ -79,7 +94,7 @@ public class LlmDigestService {
                 Current Date: {currentDate}. Evaluate all claims of recency (e.g., "new", "just announced", "latest") strictly relative to this date.
                 You are an expert news editor. Your job is to select and rank the top unique, high-quality news articles for a research digest topic.
                 1. Identify duplicate stories covering the exact same news event and pick the best single coverage source.
-                2. Rank the top unique articles by relevance and RECENCY. Penalize or discard articles that appear outdated relative to the Current Date.
+                2. Rank the top unique articles by relevance and RECENCY. Penalize or discard articles that appear outdated relative to the Current Date. Penalize >7d old, boost <2d.
                 3. Prefer articles from [Tier-1] sources when quality is otherwise equal.
                 4. You MUST select EXACTLY {targetCount} articles (unless there are fewer valid candidates available).
                 5. Respond ONLY with a valid JSON object matching this schema:

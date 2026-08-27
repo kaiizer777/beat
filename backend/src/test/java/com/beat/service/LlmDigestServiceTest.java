@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -214,5 +215,42 @@ public class LlmDigestServiceTest {
 
         assertEquals(1, result.size());
         verify(groqClient).generateJsonResponse(anyString(), anyString(), eq(800));
+    }
+
+    @Test
+    void clusterAndRank_injectsArticleDateAndRecencyInstructions() throws Exception {
+        ArgumentCaptor<String> systemPromptCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> userPromptCaptor = ArgumentCaptor.forClass(String.class);
+
+        when(groqClient.generateJsonResponse(systemPromptCaptor.capture(), userPromptCaptor.capture(), eq(300)))
+                .thenReturn("{\"rankedIndices\": [1, 0]}");
+
+        RawArticle article1 = new RawArticle(
+                "Aug 25 Article", "https://example.com/1", "snippet 1", "Reuters",
+                "Aug 25", "content 1", "tinyfish");
+        RawArticle article2 = new RawArticle(
+                "Aug 28 Article", "https://example.com/2", "snippet 2", "TechCrunch",
+                "2026-08-28T00:00:00Z", "content 2", "tinyfish");
+        RawArticle article3 = new RawArticle(
+                "Older Article", "https://example.com/3", "snippet 3", "Other",
+                "2026-08-10T00:00:00Z", "content 3", "tinyfish");
+
+        List<RawArticle> result = service.clusterAndRank(
+                List.of(article1, article2, article3), "ai agents", 2, Instant.parse("2026-08-28T01:23:50Z"));
+
+        assertEquals(2, result.size());
+        assertEquals("Aug 28 Article", result.get(0).getTitle());
+        assertEquals("Aug 25 Article", result.get(1).getTitle());
+
+        String userPrompt = userPromptCaptor.getValue();
+        int currentYear = java.time.Year.now().getValue();
+        assertTrue(userPrompt.contains("Date: Aug 25, " + currentYear + " | Title: Aug 25 Article | Snippet: snippet 1"),
+                "User prompt must format parsed yearless date: " + userPrompt);
+        assertTrue(userPrompt.contains("Date: Aug 28, 2026 | Title: Aug 28 Article | Snippet: snippet 2"),
+                "User prompt must format parsed ISO date: " + userPrompt);
+
+        String systemPrompt = systemPromptCaptor.getValue();
+        assertTrue(systemPrompt.contains("Penalize >7d old, boost <2d"),
+                "System prompt must contain recency guidance: " + systemPrompt);
     }
 }

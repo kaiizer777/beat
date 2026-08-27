@@ -182,7 +182,7 @@ public class ResearchPipelineService {
         metrics.put("freshnessKeptNullDate", droppedNullOrUnparseable);
         metrics.put("freshnessDroppedStale", droppedStale);
 
-        // Sort: newest first, null-date intermixed mid-list if content heuristic passes
+        // Sort: newest first, null-date strictly last via Comparator.nullsLast(reverseOrder)
         final int sortMaxAgeHours = effectiveMaxAgeHours;
         freshCandidates.sort(Comparator.comparing(
                 (RawArticle a) -> resolveEffectiveDate(a, sortMaxAgeHours),
@@ -433,7 +433,7 @@ public class ResearchPipelineService {
         metrics.put(passName + "_freshnessKept", freshDeduped.size());
         metrics.put(passName + "_freshnessDroppedTotal", beforeFreshness - freshDeduped.size());
 
-        // Sort newest-first, intermix null-date mid-list if content heuristic passes
+        // Sort newest-first, null-date strictly last via Comparator.nullsLast(reverseOrder)
         final int sortMaxAgeHours = effectiveMaxAgeHours;
         freshDeduped.sort(Comparator.comparing(
                 (RawArticle a) -> resolveEffectiveDate(a, sortMaxAgeHours),
@@ -497,14 +497,7 @@ public class ResearchPipelineService {
 
     private Instant resolveEffectiveDate(RawArticle a, int effectiveMaxAgeHours) {
         if (a == null) return null;
-        Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
-        if (pub != null) {
-            return pub;
-        }
-        if (hasContentLengthHeuristic(a)) {
-            return Instant.now().minus(effectiveMaxAgeHours / 2, ChronoUnit.HOURS);
-        }
-        return null;
+        return com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
     }
 
     private boolean hasContentLengthHeuristic(RawArticle a) {
