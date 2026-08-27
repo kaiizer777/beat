@@ -145,10 +145,13 @@ public class DynamicSchedulerService {
             }
 
             log.info("Trigger fired for Channel ID: {} ('{}'). Executing digest pipeline.", channel.getId(), channel.getName());
-            digestPipelineService.executeDigestPipeline(channel);
-            // Only advance lastRunAt after successful pipeline execution so isDue() can retry on failure
-            channel.setLastRunAt(Instant.now());
-            channelRepository.save(channel);
+            DigestRun run = digestPipelineService.executeDigestPipeline(channel);
+            if (run != null && run.getStatus() == DigestRunStatus.SUCCESS) {
+                channel.setLastRunAt(Instant.now());
+                channelRepository.save(channel);
+            } else {
+                log.warn("Not advancing lastRunAt for FAILED run {}", run != null ? run.getId() : "null");
+            }
         } catch (Exception e) {
             log.error("Error executing digest pipeline for Channel ID {}: {}", channelId, e.getMessage(), e);
         } finally {

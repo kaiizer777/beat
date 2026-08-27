@@ -12,7 +12,14 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
+import com.beat.entity.DigestRun;
+import com.beat.entity.DigestRunStatus;
+
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class DynamicSchedulerServiceTest {
 
@@ -80,5 +87,36 @@ class DynamicSchedulerServiceTest {
         channel.setLastRunAt(lastRunYesterday);
 
         assertTrue(dynamicSchedulerService.isDue(channel, now));
+    }
+
+    @Test
+    void testExecuteChannelPipeline_Success_AdvancesLastRunAt() {
+        Channel channel = new Channel("user1", "AI News", "AI", 10, LocalTime.of(8, 0), "Asia/Kolkata", true);
+        when(channelRepository.findById(1L)).thenReturn(Optional.of(channel));
+
+        DigestRun successRun = new DigestRun();
+        successRun.setStatus(DigestRunStatus.SUCCESS);
+        when(digestPipelineService.executeDigestPipeline(channel)).thenReturn(successRun);
+
+        dynamicSchedulerService.executeChannelPipeline(1L);
+
+        assertNotNull(channel.getLastRunAt());
+        verify(channelRepository, times(1)).save(channel);
+    }
+
+    @Test
+    void testExecuteChannelPipeline_Failed_DoesNotAdvanceLastRunAt() {
+        Channel channel = new Channel("user1", "AI News", "AI", 10, LocalTime.of(8, 0), "Asia/Kolkata", true);
+        channel.setLastRunAt(null);
+        when(channelRepository.findById(1L)).thenReturn(Optional.of(channel));
+
+        DigestRun failedRun = new DigestRun();
+        failedRun.setStatus(DigestRunStatus.FAILED);
+        when(digestPipelineService.executeDigestPipeline(channel)).thenReturn(failedRun);
+
+        dynamicSchedulerService.executeChannelPipeline(1L);
+
+        assertNull(channel.getLastRunAt());
+        verify(channelRepository, never()).save(channel);
     }
 }

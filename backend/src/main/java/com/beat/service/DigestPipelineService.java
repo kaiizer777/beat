@@ -213,8 +213,8 @@ public class DigestPipelineService {
             long duration = System.currentTimeMillis() - startTime;
             int groqCallsToday = groqUsageTracker != null ? groqUsageTracker.getDailyCallCount() : -1;
 
-            log.info("[DIGEST_RUN #{}] SUMMARY: Status=SUCCESS, Channel='{}', PersistedArticles={}, EmailSent={}, Duration={}ms, GroqDailyUsage={}/1000 RPD",
-                    runId, channel.getName(), newsItems.size(), emailSent, duration, groqCallsToday);
+            log.info("[DIGEST_RUN #{}] SUMMARY: Status={}, Channel='{}', PersistedArticles={}, EmailSent={}, Duration={}ms, GroqDailyUsage={}/1000 RPD",
+                    runId, digestRun.getStatus(), channel.getName(), newsItems.size(), emailSent, duration, groqCallsToday);
 
             return digestRun;
 

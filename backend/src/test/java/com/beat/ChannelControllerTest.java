@@ -145,5 +145,11 @@ class ChannelControllerTest {
                         .with(jwt().jwt(jwt -> jwt.subject("test_user_id"))))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void testApiTestEndpointsRequireAuth() throws Exception {
+        mockMvc.perform(get("/api/test/research"))
+                .andExpect(status().isUnauthorized());
+    }
 }
 
