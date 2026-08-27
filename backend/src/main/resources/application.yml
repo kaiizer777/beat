@@ -30,6 +30,11 @@ management:
 tinyfish:
   api-key: ${TINYFISH_API_KEY}
 
+jina:
+  api-key: ${JINA_API_KEY:}
+  enabled: true
+
+
 groq:
   api-key: ${GROQ_API_KEY}
   model: ${GROQ_MODEL:openai/gpt-oss-20b}
