@@ -500,14 +500,6 @@ public class ResearchPipelineService {
         return com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
     }
 
-    private boolean hasContentLengthHeuristic(RawArticle a) {
-        if (a == null) return false;
-        if (a.getFullText() != null && a.getFullText().length() > 500) {
-            return true;
-        }
-        return a.getSnippet() != null && !a.getSnippet().isBlank();
-    }
-
     private int getContentLength(RawArticle a) {
         if (a == null) return 0;
         if (a.getFullText() != null) return a.getFullText().length();

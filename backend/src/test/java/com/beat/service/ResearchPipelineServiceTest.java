@@ -245,4 +245,42 @@ public class ResearchPipelineServiceTest {
         assertEquals("Aug 25 Story 1", pool.get(3).getTitle());
         assertEquals("Null Date Story", pool.get(pool.size() - 1).getTitle());
     }
+
+    @Test
+    void executeResearch_codingRelatedAi_top3Aug28AndNoJul28In15() {
+        List<TinyFishClient.SearchResultItem> items = new java.util.ArrayList<>();
+        items.add(new TinyFishClient.SearchResultItem("Aug 28 Story 1", "http://aug28-1.com", "snippet 1", "InfoWorld", "2026-08-28T03:00:00Z"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 28 Story 2", "http://aug28-2.com", "snippet 2", "Business Insider", "Aug 28"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 28 Story 3", "http://aug28-3.com", "snippet 3", "TechCrunch", "Aug. 28"));
+        items.add(new TinyFishClient.SearchResultItem("Aug 27 Reuters", "http://aug27-reuters.com", "snippet 4", "Reuters", "2026-08-27T10:00:00Z"));
+
+        for (int i = 1; i <= 12; i++) {
+            items.add(new TinyFishClient.SearchResultItem("Mid Aug Story " + i, "http://midaug" + i + ".com", "snippet", "Pub",
+                    Instant.now().minus(48 + i * 24, ChronoUnit.HOURS).toString()));
+        }
+        // Jul 28 old article (stale, 31 days old)
+        items.add(new TinyFishClient.SearchResultItem("Ancient Jul 28 Story", "http://jul28.com", "snippet", "OldPub", "2026-07-28T00:00:00Z"));
+
+        when(tinyFishClient.searchNews(anyString())).thenAnswer(invocation -> {
+            String query = invocation.getArgument(0);
+            if (query.equals("coding related ai")) {
+                return items;
+            }
+            return List.of();
+        });
+        when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
+
+        ResearchResult result = researchPipelineService.executeResearch("coding related ai", 168, 15);
+        List<RawArticle> pool = result.getArticles();
+
+        assertTrue(pool.size() >= 15, "Pool size must be at least targetCount 15, was: " + pool.size());
+        assertEquals("Aug 28 Story 1", pool.get(0).getTitle());
+        assertEquals("Aug 28 Story 2", pool.get(1).getTitle());
+        assertEquals("Aug 28 Story 3", pool.get(2).getTitle());
+        assertEquals("Aug 27 Reuters", pool.get(3).getTitle());
+
+        boolean hasJul28 = pool.stream().anyMatch(a -> a.getTitle().contains("Jul 28"));
+        assertFalse(hasJul28, "Pool of 15 must not contain Jul 28 old news");
+    }
 }

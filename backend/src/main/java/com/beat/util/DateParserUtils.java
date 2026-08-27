@@ -22,8 +22,10 @@ public class DateParserUtils {
     private static final Pattern YESTERDAY_PATTERN = Pattern.compile("(?i)yesterday");
 
     private static final List<DateTimeFormatter> FORMATTERS = Arrays.asList(
-            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("[MMMM][MMM] d, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("[MMMM][MMM] dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("d [MMMM][MMM] yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd [MMMM][MMM] yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.ENGLISH),
@@ -31,12 +33,22 @@ public class DateParserUtils {
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH),
             new DateTimeFormatterBuilder()
                     .parseCaseInsensitive()
-                    .appendPattern("MMM d")
+                    .appendPattern("[MMMM][MMM] d")
                     .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
                     .toFormatter(Locale.ENGLISH),
             new DateTimeFormatterBuilder()
                     .parseCaseInsensitive()
-                    .appendPattern("MMM dd")
+                    .appendPattern("[MMMM][MMM] dd")
+                    .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
+                    .toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("d [MMMM][MMM]")
+                    .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
+                    .toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("dd [MMMM][MMM]")
                     .parseDefaulting(ChronoField.YEAR, Year.now().getValue())
                     .toFormatter(Locale.ENGLISH)
     );
@@ -104,9 +116,10 @@ public class DateParserUtils {
         }
 
         // 3. Try standard locale formats
+        String normalizedDate = cleaned.replaceAll("(?i)\\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.", "$1");
         for (DateTimeFormatter formatter : FORMATTERS) {
             try {
-                LocalDate date = LocalDate.parse(cleaned, formatter);
+                LocalDate date = LocalDate.parse(normalizedDate, formatter);
                 return date.atStartOfDay(ZoneOffset.UTC).toInstant();
             } catch (DateTimeParseException ignored) {
             }

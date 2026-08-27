@@ -90,6 +90,29 @@ class DateParserUtilsTest {
     }
 
     @Test
+    void testParseYearlessAug28Variants() {
+        int currentYear = java.time.Year.now().getValue();
+        Instant expected = Instant.parse(currentYear + "-08-28T00:00:00Z");
+
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("Aug 28"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("August 28"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("Aug. 28"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("28 Aug"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("28 August"));
+    }
+
+    @Test
+    void testParseFullYearVariants() {
+        Instant expected = Instant.parse("2026-08-28T00:00:00Z");
+
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("Aug 28, 2026"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("August 28, 2026"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("Aug. 28, 2026"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("28 Aug 2026"));
+        assertEquals(expected, DateParserUtils.parseInstantOrNull("28 August 2026"));
+    }
+
+    @Test
     void testParseInvalidFormat() {
         assertNull(DateParserUtils.parseInstantOrNull("Unknown date format"));
         assertNull(DateParserUtils.parseInstantOrNull("next week"));
