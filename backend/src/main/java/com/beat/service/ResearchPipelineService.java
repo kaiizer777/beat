@@ -128,15 +128,9 @@ public class ResearchPipelineService {
         metrics.put("afterPreFetchDedup", deduplicatedCandidates.size());
         metrics.put("preFetchDedupDropped", preDedupSize - deduplicatedCandidates.size());
 
-        // Freshness Dynamic Window: expand window if candidate pool is starving (< targetCount * 2)
-        int candidateCount = deduplicatedCandidates.size();
+        // Freshness Dynamic Window: initial filter with base window
         int freshnessWindowDays = maxAgeHours > 0 ? (maxAgeHours / 24) : 7;
         int dynamicWindowDays = freshnessWindowDays;
-        if (targetCount > 0 && candidateCount < targetCount * 2) {
-            dynamicWindowDays = Math.max(freshnessWindowDays, 14);
-            log.info("Expanding freshness window to {}d due to starvation (candidates={} < {})",
-                    dynamicWindowDays, candidateCount, targetCount * 2);
-        }
         int effectiveMaxAgeHours = dynamicWindowDays * 24;
         Instant cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
 
@@ -155,6 +149,31 @@ public class ResearchPipelineService {
                 droppedStale++;
             }
         }
+
+        // Freshness Dynamic Window: expand window to 30d if candidate pool is starving (< targetCount * 2) after freshness filter
+        if (targetCount > 0 && freshCandidates.size() < targetCount * 2) {
+            dynamicWindowDays = Math.max(freshnessWindowDays, 30);
+            effectiveMaxAgeHours = dynamicWindowDays * 24;
+            cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
+            log.info("Expanding freshness window to {}d due to starvation (fresh candidates={} < {})",
+                    dynamicWindowDays, freshCandidates.size(), targetCount * 2);
+
+            freshCandidates = new ArrayList<>();
+            droppedNullOrUnparseable = 0;
+            droppedStale = 0;
+            for (RawArticle a : deduplicatedCandidates) {
+                Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+                if (pub == null) {
+                    droppedNullOrUnparseable++;
+                    freshCandidates.add(a);
+                } else if (pub.isAfter(cutoff)) {
+                    freshCandidates.add(a);
+                } else {
+                    droppedStale++;
+                }
+            }
+        }
+
         int dropped = initialFreshnessSize - freshCandidates.size();
         log.info("Freshness filter: kept {} / dropped {} (nullKept={}, staleDropped={})",
                 freshCandidates.size(), dropped, droppedNullOrUnparseable, droppedStale);
@@ -164,8 +183,9 @@ public class ResearchPipelineService {
         metrics.put("freshnessDroppedStale", droppedStale);
 
         // Sort: newest first, null-date intermixed mid-list if content heuristic passes
+        final int sortMaxAgeHours = effectiveMaxAgeHours;
         freshCandidates.sort(Comparator.comparing(
-                (RawArticle a) -> resolveEffectiveDate(a, effectiveMaxAgeHours),
+                (RawArticle a) -> resolveEffectiveDate(a, sortMaxAgeHours),
                 Comparator.nullsLast(Comparator.reverseOrder())
         ).thenComparing(Comparator.comparingInt(this::getContentLength).reversed()));
 
@@ -379,15 +399,9 @@ public class ResearchPipelineService {
         metrics.put(passName + "_afterPreFetchDedup", deduped.size());
         metrics.put(passName + "_preFetchDedupDropped", preDedup - deduped.size());
 
-        // Dynamic freshness window
-        int candidateCount = deduped.size();
+        // Dynamic freshness window: initial filter with base window
         int freshnessWindowDays = maxAgeHours > 0 ? (maxAgeHours / 24) : 7;
         int dynamicWindowDays = freshnessWindowDays;
-        if (targetCount > 0 && candidateCount < targetCount * 2) {
-            dynamicWindowDays = Math.max(freshnessWindowDays, 14);
-            log.info("Expanding freshness window to {}d due to starvation in {} pass (candidates={} < {})",
-                    dynamicWindowDays, passName, candidateCount, targetCount * 2);
-        }
         int effectiveMaxAgeHours = dynamicWindowDays * 24;
         Instant cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
 
@@ -399,12 +413,30 @@ public class ResearchPipelineService {
                 freshDeduped.add(a);
             }
         }
+
+        // Expand freshness window to 30d if candidate pool is starving (< targetCount * 2) after freshness filter
+        if (targetCount > 0 && freshDeduped.size() < targetCount * 2) {
+            dynamicWindowDays = Math.max(freshnessWindowDays, 30);
+            effectiveMaxAgeHours = dynamicWindowDays * 24;
+            cutoff = Instant.now().minus(effectiveMaxAgeHours, ChronoUnit.HOURS);
+            log.info("Expanding freshness window to {}d due to starvation in {} pass (fresh candidates={} < {})",
+                    dynamicWindowDays, passName, freshDeduped.size(), targetCount * 2);
+
+            freshDeduped = new ArrayList<>();
+            for (RawArticle a : deduped) {
+                Instant pub = com.beat.util.DateParserUtils.parseInstantOrNull(a.getPublishedAt());
+                if (pub == null || pub.isAfter(cutoff)) {
+                    freshDeduped.add(a);
+                }
+            }
+        }
         metrics.put(passName + "_freshnessKept", freshDeduped.size());
         metrics.put(passName + "_freshnessDroppedTotal", beforeFreshness - freshDeduped.size());
 
         // Sort newest-first, intermix null-date mid-list if content heuristic passes
+        final int sortMaxAgeHours = effectiveMaxAgeHours;
         freshDeduped.sort(Comparator.comparing(
-                (RawArticle a) -> resolveEffectiveDate(a, effectiveMaxAgeHours),
+                (RawArticle a) -> resolveEffectiveDate(a, sortMaxAgeHours),
                 Comparator.nullsLast(Comparator.reverseOrder())
         ).thenComparing(Comparator.comparingInt(this::getContentLength).reversed()));
 

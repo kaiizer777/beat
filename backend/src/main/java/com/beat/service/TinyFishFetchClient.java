@@ -170,11 +170,16 @@ public class TinyFishFetchClient {
                     JsonNode resultsNode = root.path("results");
                     if (resultsNode.isArray() && !resultsNode.isEmpty()) {
                         JsonNode firstResult = resultsNode.get(0);
-                        String status = firstResult.path("status").asText("");
-                        String content = firstResult.path("content").asText("");
-
-                        if ("success".equalsIgnoreCase(status) && !content.isBlank()) {
-                            return new FetchResult(content, "tinyfish");
+                        if (firstResult.has("text") || firstResult.has("content")) {
+                            String content = firstResult.has("text")
+                                    ? firstResult.path("text").asText("")
+                                    : firstResult.path("content").asText("");
+                            if (content.isBlank() && firstResult.has("content")) {
+                                content = firstResult.path("content").asText("");
+                            }
+                            if (!content.isBlank()) {
+                                return new FetchResult(content, "tinyfish");
+                            }
                         }
                     }
                 }

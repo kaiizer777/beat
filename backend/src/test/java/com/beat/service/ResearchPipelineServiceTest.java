@@ -105,9 +105,9 @@ public class ResearchPipelineServiceTest {
     }
 
     @Test
-    void executeResearch_expandsFreshnessWindowTo14DaysOnStarvation() {
+    void executeResearch_expandsFreshnessWindowTo30DaysOnStarvation() {
         TinyFishClient.SearchResultItem freshItem = new TinyFishClient.SearchResultItem("Fresh", "http://fresh.com", "snippet", "publisher", Instant.now().minus(24, ChronoUnit.HOURS).toString());
-        // 200 hours old: would be dropped by 168h window, but kept by expanded 14-day (336h) window!
+        // 200 hours old: would be dropped by 168h window, but kept by expanded 30-day (720h) window!
         TinyFishClient.SearchResultItem olderItem = new TinyFishClient.SearchResultItem("200h Old", "http://old200.com", "snippet", "publisher", Instant.now().minus(200, ChronoUnit.HOURS).toString());
         TinyFishClient.SearchResultItem nullDateItem = new TinyFishClient.SearchResultItem("Null Date", "http://nulldate.com", "snippet", "publisher", null);
         TinyFishClient.SearchResultItem freshItem2 = new TinyFishClient.SearchResultItem("Fresh 2", "http://fresh2.com", "snippet", "publisher", Instant.now().minus(48, ChronoUnit.HOURS).toString());
@@ -122,10 +122,10 @@ public class ResearchPipelineServiceTest {
         when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
         when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
 
-        // targetCount = 15 -> starvation threshold is 30. candidates = 4 < 30 -> expands window to 14 days (336h)
+        // targetCount = 15 -> starvation threshold is 30. candidates = 4 < 30 -> expands window to 30 days (720h)
         List<RawArticle> pool = researchPipelineService.executeResearch("ai", 168, 15).getArticles();
 
-        // All 4 should be kept because 200h is within 336h
+        // All 4 should be kept because 200h is within 720h
         assertEquals(4, pool.size());
         assertTrue(pool.stream().anyMatch(a -> a.getTitle().equals("200h Old")));
     }
@@ -133,7 +133,7 @@ public class ResearchPipelineServiceTest {
     @Test
     void executeResearch_nullDateIntermixedMidListAheadOfOlderArticles() {
         TinyFishClient.SearchResultItem newest = new TinyFishClient.SearchResultItem("Newest 1d", "http://1d.com", "snippet", "publisher", Instant.now().minus(24, ChronoUnit.HOURS).toString());
-        TinyFishClient.SearchResultItem older = new TinyFishClient.SearchResultItem("Older 10d", "http://10d.com", "snippet", "publisher", Instant.now().minus(240, ChronoUnit.HOURS).toString());
+        TinyFishClient.SearchResultItem older = new TinyFishClient.SearchResultItem("Older 20d", "http://20d.com", "snippet", "publisher", Instant.now().minus(480, ChronoUnit.HOURS).toString());
         TinyFishClient.SearchResultItem nullDate = new TinyFishClient.SearchResultItem("Null Date", "http://null.com", "meaningful snippet text", "publisher", null);
 
         when(tinyFishClient.searchNews(anyString())).thenAnswer(invocation -> {
@@ -146,14 +146,42 @@ public class ResearchPipelineServiceTest {
         when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
         when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
 
-        // targetCount = 15, starvation expands window to 14d (336h).
-        // Midpoint of 336h is 168h (7 days).
-        // Order should be: Newest 1d (24h) -> Null Date (~168h midpoint) -> Older 10d (240h).
+        // targetCount = 15, starvation expands window to 30d (720h).
+        // Midpoint of 720h is 360h (15 days).
+        // Order should be: Newest 1d (24h) -> Null Date (~360h midpoint) -> Older 20d (480h).
         List<RawArticle> pool = researchPipelineService.executeResearch("tech", 168, 15).getArticles();
 
         assertEquals(3, pool.size());
         assertEquals("Newest 1d", pool.get(0).getTitle());
         assertEquals("Null Date", pool.get(1).getTitle());
-        assertEquals("Older 10d", pool.get(2).getTitle());
+        assertEquals("Older 20d", pool.get(2).getTitle());
+    }
+
+    @Test
+    void executeResearch_starvationTriggeredAfterFreshnessFilterWhenRawCandidatesExceedThreshold() {
+        // 35 raw candidates: under previous code, 35 >= target*2 (30), so starvation window never expanded!
+        // But 34 of them are 20 days old (480h), and only 1 is fresh within 7 days (24h).
+        // With starvation check AFTER freshness filter, freshCandidates.size() (1) < target*2 (30),
+        // so window expands to 30d (720h) and re-filters to include all 35 candidates!
+        TinyFishClient.SearchResultItem fresh = new TinyFishClient.SearchResultItem("Fresh 1d", "http://fresh.com", "snippet", "publisher", Instant.now().minus(24, ChronoUnit.HOURS).toString());
+        java.util.List<TinyFishClient.SearchResultItem> items = new java.util.ArrayList<>();
+        items.add(fresh);
+        for (int i = 1; i <= 34; i++) {
+            items.add(new TinyFishClient.SearchResultItem("Older " + i, "http://older" + i + ".com", "snippet", "publisher", Instant.now().minus(480, ChronoUnit.HOURS).toString()));
+        }
+
+        when(tinyFishClient.searchNews(anyString())).thenAnswer(invocation -> {
+            String query = invocation.getArgument(0);
+            if (query.equals("niche ai")) {
+                return items;
+            }
+            return List.of();
+        });
+        when(deduplicationService.deduplicate(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(fetchClient.fetchContent(anyString())).thenReturn(new TinyFishFetchClient.FetchResult("Full content text", "tinyfish"));
+
+        List<RawArticle> pool = researchPipelineService.executeResearch("niche ai", 168, 15).getArticles();
+
+        assertEquals(35, pool.size());
     }
 }
