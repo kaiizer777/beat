@@ -110,6 +110,9 @@ public class TinyFishFetchClient {
         this.objectMapper = new ObjectMapper();
         this.apiKey = apiKey;
         this.jinaApiKey = jinaApiKey;
+        if (jinaApiKey == null || jinaApiKey.trim().isEmpty()) {
+            log.warn("JINA_API_KEY is empty or not configured. Jina fallback requests may return 403 Forbidden in cloud hosting (Render).");
+        }
     }
 
     public TinyFishFetchClient(String apiKey) {
