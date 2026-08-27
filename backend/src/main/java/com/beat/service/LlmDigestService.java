@@ -272,20 +272,18 @@ public class LlmDigestService {
     }
 
     /**
-     * L4: Heuristic: a blurb is "short" if it has fewer than 40 words OR fewer than 2 sentences.
-     * Threshold raised from 30 → 40 so genuine 2-sentence technical blurbs (40-60 words) don't
-     * incorrectly bypass the safety net.
+     * Heuristic: a blurb is "short" if it has fewer than 25 words OR fewer than 1 sentence.
+     * A 2-sentence 35-word technical blurb is valid and does not trigger expansion.
      */
-    private boolean isShortBlurb(String blurb) {
+    boolean isShortBlurb(String blurb) {
         if (blurb == null || blurb.isBlank()) return true;
         String trimmed = blurb.trim();
         if (trimmed.endsWith("...") || trimmed.endsWith("…")) return true;  // mid-thought truncation
-        // Count sentences by terminal punctuation. A "good" blurb has at least 2.
+        // Count sentences by terminal punctuation.
         int sentences = trimmed.split("[.!?]+").length;
-        if (sentences < 2) return true;
-        // L4: Word count threshold raised 30 → 40.
+        if (sentences < 1) return true;
         String[] words = trimmed.split("\\s+");
-        return words.length < 40;
+        return words.length < 25;
     }
 
     /**
@@ -361,7 +359,22 @@ public class LlmDigestService {
             return List.of();
         }
 
-        log.info("Executing Groq LLM Call 3 (Batch Fact-Check) for {} articles in a single call", articles.size());
+        List<RawArticle> articlesToVerify = new ArrayList<>();
+        for (RawArticle article : articles) {
+            if (article.getFetchedContent() == null || article.getFetchedContent().length() < 400) {
+                log.info("Skipping fact-check for snippet-only article: '{}'", article.getTitle());
+            } else {
+                articlesToVerify.add(article);
+            }
+        }
+
+        if (articlesToVerify.isEmpty()) {
+            log.info("Groq Call 3 (Batch Fact-Check): all {} articles are snippet-only, accepted as-is", articles.size());
+            return new ArrayList<>(articles);
+        }
+
+        log.info("Executing Groq LLM Call 3 (Batch Fact-Check) for {}/{} articles with fetched content in a single call",
+                articlesToVerify.size(), articles.size());
 
         String currentDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(currentInstant.atZone(ZoneOffset.UTC));
 
@@ -379,8 +392,8 @@ public class LlmDigestService {
                 """.replace("{currentDate}", currentDate);
 
         StringBuilder userPrompt = new StringBuilder();
-        for (int i = 0; i < articles.size(); i++) {
-            RawArticle article = articles.get(i);
+        for (int i = 0; i < articlesToVerify.size(); i++) {
+            RawArticle article = articlesToVerify.get(i);
             String text = article.getFullText();
             if (text == null || text.isBlank()) {
                 text = article.getSnippet();
@@ -395,21 +408,21 @@ public class LlmDigestService {
         }
 
         try {
-            // L5: cap output — each result is a short JSON object, ~50 tokens × N + overhead
-            int maxTokens = Math.max(500, articles.size() * 60);
+            // L5: cap output — each result is a short JSON object, ~50-100 tokens × N + overhead
+            int maxTokens = Math.max(800, articles.size() * 120);
             String jsonResult = groqClient.generateJsonResponse(systemPrompt, userPrompt.toString(), maxTokens);
             JsonNode root = objectMapper.readTree(jsonResult);
             JsonNode resultsNode = root.path("results");
 
-            if (!resultsNode.isArray() || resultsNode.size() != articles.size()) {
+            if (!resultsNode.isArray() || resultsNode.size() != articlesToVerify.size()) {
                 log.warn("Batch fact-check: response array size mismatch (expected={}, got={}). Accepting all blurbs as-is.",
-                        articles.size(), resultsNode.size());
+                        articlesToVerify.size(), resultsNode.size());
                 return new ArrayList<>(articles);
             }
 
-            List<RawArticle> accepted = new ArrayList<>();
-            for (int i = 0; i < articles.size(); i++) {
-                RawArticle article = articles.get(i);
+            Set<RawArticle> rejectedSet = new java.util.HashSet<>();
+            for (int i = 0; i < articlesToVerify.size(); i++) {
+                RawArticle article = articlesToVerify.get(i);
                 JsonNode result = resultsNode.get(i);
                 boolean isValid = result.path("isValid").asBoolean(true);
                 JsonNode refinedNode = result.path("refinedBlurb");
@@ -418,16 +431,22 @@ public class LlmDigestService {
                 if (refinedBlurb != null && !refinedBlurb.isBlank()) {
                     // LLM provided a fix — use it
                     article.setSummaryBlurb(refinedBlurb.trim());
-                    accepted.add(article);
                     log.debug("Batch fact-check: article [{}] refined by LLM: '{}'", i, article.getTitle());
                 } else if (isValid) {
                     // LLM says valid, original blurb stands
-                    accepted.add(article);
                 } else {
                     // isValid=false and no refinedBlurb — genuine model rejection
                     String reason = result.path("rejectionReason").asText("unspecified");
                     log.warn("Batch fact-check: article [{}] rejected. Title='{}', Reason={}",
                             i, article.getTitle(), reason);
+                    rejectedSet.add(article);
+                }
+            }
+
+            List<RawArticle> accepted = new ArrayList<>();
+            for (RawArticle article : articles) {
+                if (!rejectedSet.contains(article)) {
+                    accepted.add(article);
                 }
             }
 

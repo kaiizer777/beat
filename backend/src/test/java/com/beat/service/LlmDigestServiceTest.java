@@ -13,10 +13,13 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -140,5 +143,76 @@ public class LlmDigestServiceTest {
         service.synthesizeBlurbs(List.of(article), "ai models", Instant.now());
 
         assertEquals(fullBlurb, article.getSummaryBlurb());
+    }
+
+    @Test
+    void isShortBlurb_technicalTwoSentenceThirtyFiveWords_isValid() {
+        // A 2-sentence 35-word technical blurb is valid and must NOT trigger expandShortBlurb
+        String validBlurb = "OpenAI released a major architecture update that substantially lowers inference latency across large models. " +
+                "This matters because enterprise teams can now run faster production pipelines with dramatically reduced computational overhead and latency.";
+        String[] words = validBlurb.split("\\s+");
+        assertTrue(words.length >= 25 && words.length <= 40, "Word count should be between 25 and 40: was " + words.length);
+
+        assertFalse(service.isShortBlurb(validBlurb),
+                "A 2-sentence 35-word technical blurb must not be flagged as short");
+    }
+
+    @Test
+    void isShortBlurb_underTwentyFiveWords_isShort() {
+        String shortBlurb = "New model released today. It is very fast.";
+        assertTrue(service.isShortBlurb(shortBlurb),
+                "Blurb under 25 words must be flagged as short");
+    }
+
+    @Test
+    void batchVerifyAndRefine_skipsSnippetOnlyArticlesAndFactChecksFullText() throws Exception {
+        // Article 1: full text available (> 500 chars) -> sent to Groq
+        String fullText1 = "A".repeat(800);
+        RawArticle article1 = new RawArticle(
+                "Full Text Article", "https://example.com/1", "snippet 1", "Reuters",
+                "2026-08-24T00:00:00Z", fullText1, "tinyfish");
+        article1.setSummaryBlurb("Synthesized blurb for full text article 1.");
+
+        // Article 2: snippet only (fullText null or < 400 chars) -> skipped, accepted as-is
+        RawArticle article2 = new RawArticle(
+                "Snippet Only Article", "https://example.com/2", "short snippet 2", "TechCrunch",
+                "2026-08-24T00:00:00Z", null, null);
+        article2.setSummaryBlurb("Synthesized blurb for snippet article 2.");
+
+        // Article 3: full text available (> 500 chars) -> rejected by Groq
+        String fullText3 = "B".repeat(900);
+        RawArticle article3 = new RawArticle(
+                "Rejected Full Article", "https://example.com/3", "snippet 3", "Bloomberg",
+                "2026-08-24T00:00:00Z", fullText3, "jina");
+        article3.setSummaryBlurb("Synthesized blurb for full text article 3.");
+
+        // Groq only receives article 1 and article 3 (size 2)
+        when(groqClient.generateJsonResponse(anyString(), anyString(), anyInt()))
+                .thenReturn("{\"results\": [{\"isValid\": true, \"refinedBlurb\": null}, {\"isValid\": false, \"refinedBlurb\": null, \"rejectionReason\": \"hallucination\"}]}");
+
+        List<RawArticle> result = service.batchVerifyAndRefine(List.of(article1, article2, article3), Instant.now());
+
+        // Article 1 (valid) and Article 2 (snippet-only skip) should be accepted, Article 3 dropped
+        assertEquals(2, result.size());
+        assertTrue(result.contains(article1));
+        assertTrue(result.contains(article2));
+        assertFalse(result.contains(article3));
+        assertEquals("Synthesized blurb for snippet article 2.", article2.getSummaryBlurb());
+    }
+
+    @Test
+    void batchVerifyAndRefine_usesIncreasedMaxTokenCap() throws Exception {
+        RawArticle article = new RawArticle(
+                "Full Text Article", "https://example.com/1", "snippet 1", "Reuters",
+                "2026-08-24T00:00:00Z", "C".repeat(600), "tinyfish");
+        article.setSummaryBlurb("Synthesized blurb.");
+
+        when(groqClient.generateJsonResponse(anyString(), anyString(), eq(800)))
+                .thenReturn("{\"results\": [{\"isValid\": true, \"refinedBlurb\": null}]}");
+
+        List<RawArticle> result = service.batchVerifyAndRefine(List.of(article), Instant.now());
+
+        assertEquals(1, result.size());
+        verify(groqClient).generateJsonResponse(anyString(), anyString(), eq(800));
     }
 }

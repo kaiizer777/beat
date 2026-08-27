@@ -73,6 +73,14 @@ public class RawArticle {
         this.fullText = fullText;
     }
 
+    public String getFetchedContent() {
+        return fullText;
+    }
+
+    public void setFetchedContent(String fetchedContent) {
+        this.fullText = fetchedContent;
+    }
+
     public String getFetchSource() {
         return fetchSource;
     }
