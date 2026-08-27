@@ -18,7 +18,8 @@ jobs:
     steps:
       - name: Trigger due channels endpoint
         run: |
-          curl -X POST https://beat-fuvv.onrender.com/api/internal/run-due-channels \ # TODO: move to vars.BACKEND_URL
+          # TODO: move URL to vars.BACKEND_URL
+          curl -X POST https://beat-fuvv.onrender.com/api/internal/run-due-channels \
             -H "X-Internal-Secret: ${{ secrets.INTERNAL_SECRET }}" \
             -H "Content-Type: application/json" \
             --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors --connect-timeout 15 --max-time 60

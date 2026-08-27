@@ -78,11 +78,12 @@ public class DigestPipelineService {
                     runId, candidateArticles.size(), channel.getName(), freshnessWindowDays);
 
             if (candidateArticles.isEmpty()) {
-                log.warn("[DIGEST_RUN #{}] STAGE 1 WARNING: No articles were found/fetched for channel '{}'. Marking run as completed with 0 items.",
-                        runId, channel.getName());
+                log.warn("[DIGEST_RUN #{}] STAGE 1 WARNING: No articles were found/fetched for channel '{}'. Marking run as FAILED with 0 items (targetCount={}).",
+                        runId, channel.getName(), targetCount);
                 log.info("[DIGEST_RUN #{}] PIPELINE_METRICS targetCount={} research={} clusterRank=NA synthesize=NA factCheck=NA persisted=0",
                         runId, targetCount, researchMetrics);
-                digestRun.setStatus(DigestRunStatus.SUCCESS);
+                digestRun.setStatus(DigestRunStatus.FAILED);
+                digestRun.setErrorMessage("No candidates after research/fetch - 0 articles to process");
                 digestRun.setEmailSent(false);
                 digestRun = digestRunRepository.save(digestRun);
                 return digestRun;
@@ -198,10 +199,12 @@ public class DigestPipelineService {
             }
             digestRun.setEmailSent(emailSent);
 
-            // 6. Update DigestRun status — fail if all articles were rejected by fact-check
-            if (newsItems.isEmpty() && originalCount > 0) {
+            // 6. Update DigestRun status — fail on under-delivery (persisted < min(5, targetCount))
+            int minExpected = Math.min(5, targetCount);
+            if (newsItems.size() < minExpected) {
+                String existingError = digestRun.getErrorMessage();
                 digestRun.setStatus(DigestRunStatus.FAILED);
-                digestRun.setErrorMessage("All articles rejected by fact-check (Groq TPD limit?)");
+                digestRun.setErrorMessage("Under-delivery: only " + newsItems.size() + "/" + targetCount + " stories" + (existingError != null ? " (" + existingError + ")" : ""));
             } else {
                 digestRun.setStatus(DigestRunStatus.SUCCESS);
             }
